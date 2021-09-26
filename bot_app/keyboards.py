@@ -8,6 +8,6 @@ HELP = InlineKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True).add(in
 SERVICES = InlineKeyboardMarkup(resize_keyboard=True)
 services_all = Services.objects.all()
 for service in services_all:
-    inline_btn_service = InlineKeyboardButton(f'{service.name}, цена: {service.price}',
+    inline_btn_service = InlineKeyboardButton(f'{service.name}: {service.price}р.',
                                               callback_data=service.callback_name)
     SERVICES.add(inline_btn_service)

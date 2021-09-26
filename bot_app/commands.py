@@ -4,6 +4,7 @@ import time
 import requests
 from asgiref.sync import sync_to_async
 
+from services.models import Services
 from users.models import Users
 from .app import dp, bot
 
@@ -84,17 +85,28 @@ async def get_sim(message: types.Message, state: FSMContext):
         data['api_base_url'] = 'https://sms-activate.ru/stubs/handler_api.php?'
         data['api_key'] = f'${user.api_key}'
         data['action'] = 'getNumber'
+        data['country'] = '0'
     time.sleep(1)
     await message.answer('Выберите сервис:', reply_markup=SERVICES)
+
+
+@sync_to_async
+def find_service(callback_name):
+    service = Services.objects.get(callback_name=callback_name)
+    return service
 
 
 @dp.callback_query_handler(lambda c: c.data in ['5ka', 'samokat', 'bk', 'ozon', 'dc', 'all'],
                            state=States.get_service)
 async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
-    service = callback_query.data                            # ответ пользователя
+    service = await find_service(callback_query.data)
     time.sleep(1)
     async with state.proxy() as data:
-        data['service'] = service
-        await bot.send_message(callback_query.from_user.id,
-                               f'Вы выбрали {service} and {data}')
+        data['service'] = service.code
+
+    res = requests.get(data['api_base_url'] + 'api_key=' + data['api_key'] + '&action=' + data['action'] +
+                       '&service=' + data['service'] + '&country=' + data['country'])
+    number = res.text.split(':')[2]
+    await bot.send_message(
+        callback_query.from_user.id, f'Ваш номер для сервиса "{service.name}":\n {number[1:]}')
