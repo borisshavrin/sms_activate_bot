@@ -4,7 +4,6 @@ import time
 import requests
 from asgiref.sync import sync_to_async
 
-from sms_activate_bot.settings import API_TOKEN_SMS_ACTIVATE
 from users.models import Users
 from .app import dp, bot
 
@@ -98,4 +97,4 @@ async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
     async with state.proxy() as data:
         data['service'] = service
         await bot.send_message(callback_query.from_user.id,
-                               f'Вы выбрали {service} and {data}', reply_markup=SERVICES)
+                               f'Вы выбрали {service} and {data}')

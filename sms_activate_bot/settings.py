@@ -26,7 +26,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
 API_TOKEN_BOT = env("API_TOKEN_BOT")
-API_TOKEN_SMS_ACTIVATE = env("API_TOKEN_SMS_ACTIVATE")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -45,6 +44,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'users',
+    'services',
 ]
 
 MIDDLEWARE = [
