@@ -2,8 +2,10 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 import time
 import requests
+from asgiref.sync import sync_to_async
 
 from sms_activate_bot.settings import API_TOKEN_SMS_ACTIVATE
+from users.models import Users
 from .app import dp, bot
 
 from .messages import WELCOME_MESSAGE
@@ -34,8 +36,13 @@ async def send_api_key(message: types.Message, state: FSMContext):
 
 @dp.message_handler(content_types=["text"], state=States.get_api_key)
 async def get_api_key(message: types.Message, state: FSMContext):
-    api_key = message.text
+    await create_user(message.from_user.id, message.text)
 
+
+@sync_to_async
+def create_user(user_id, text):
+    user = Users.objects.create(user_id_tg=user_id, api_key=text)
+    user.save()
 
 
 @dp.message_handler(commands=['balance'])
