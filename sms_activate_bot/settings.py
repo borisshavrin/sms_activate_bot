@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import environ
+
+env = environ.Env()
+environ.Env.read_env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,7 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure--237kmh#_l4bj62h4)h8a6+8ns(t)c!*0v+9*&&0q@xu9$k9!!'
+SECRET_KEY = env("SECRET_KEY")
+API_TOKEN_BOT = env("API_TOKEN_BOT")
+API_TOKEN_SMS_ACTIVATE = env("API_TOKEN_SMS_ACTIVATE")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
