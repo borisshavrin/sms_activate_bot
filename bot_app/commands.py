@@ -22,7 +22,7 @@ async def start_message(message: types.Message):
 
 
 @dp.message_handler(commands=['help'])
-async def start_message(message: types.Message):
+async def help_message(message: types.Message):
     time.sleep(1)
     await message.reply('Список доступных комманд:')
     await message.answer(f'{COMMANDS}')
@@ -36,7 +36,17 @@ async def send_api_key(message: types.Message, state: FSMContext):
 
 @dp.message_handler(content_types=["text"], state=States.get_api_key)
 async def get_api_key(message: types.Message, state: FSMContext):
-    await create_user(message.from_user.id, message.text)
+    api_key = message.text
+    try:
+        user = await get_user(message.from_user.id)
+        await update_api_key(user, api_key)
+        await message.answer('Ключ обновлен!')
+    except:
+        await create_user(message.from_user.id, api_key)
+        await message.answer('Пользователь создан!')
+    finally:
+        await States.api_key_ready.set()
+        await message.answer('Теперь вам доступен заказ номеров, воспользуйтесь командой /get_sim')
 
 
 @sync_to_async
@@ -45,10 +55,23 @@ def create_user(user_id, text):
     user.save()
 
 
+@sync_to_async
+def update_api_key(user, api_key):
+    user.api_key = api_key
+    user.save()
+
+
+@sync_to_async
+def get_user(user_id):
+    user = Users.objects.get(user_id_tg=user_id)
+    return user
+
+
 @dp.message_handler(commands=['balance'])
 async def get_balance(message: types.Message):
+    user = await get_user(message.from_user.id)
     res = requests.get(f'https://sms-activate.ru/stubs/handler_api.php?'
-                       f'api_key=${API_TOKEN_SMS_ACTIVATE}&action=getBalance')
+                       f'api_key=${user.api_key}&action=getBalance')
     balance = res.text.split(':')[1]
     time.sleep(1)
     await message.answer(f'Баланс: {balance}')
@@ -56,10 +79,11 @@ async def get_balance(message: types.Message):
 
 @dp.message_handler(commands=['get_sim'], state='*')
 async def get_sim(message: types.Message, state: FSMContext):
+    user = await get_user(message.from_user.id)
     await States.get_service.set()
     async with state.proxy() as data:               # добавление данных в Хранилище состояний (MemoryStorage)
         data['api_base_url'] = 'https://sms-activate.ru/stubs/handler_api.php?'
-        data['api_key'] = f'${API_TOKEN_SMS_ACTIVATE}'
+        data['api_key'] = f'${user.api_key}'
         data['action'] = 'getNumber'
     time.sleep(1)
     await message.answer('Выберите сервис:', reply_markup=SERVICES)
@@ -69,8 +93,9 @@ async def get_sim(message: types.Message, state: FSMContext):
                            state=States.get_service)
 async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
-    answer = callback_query.data                            # ответ пользователя
+    service = callback_query.data                            # ответ пользователя
     time.sleep(1)
     async with state.proxy() as data:
+        data['service'] = service
         await bot.send_message(callback_query.from_user.id,
-                               f'Вы выбрали {answer} and {data}', reply_markup=SERVICES)
+                               f'Вы выбрали {service} and {data}', reply_markup=SERVICES)
