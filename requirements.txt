@@ -1,0 +1,6 @@
+Django~=3.2.7
+djangorestframework
+django-environ
+aiogram
+requests
+aiohttp
