@@ -70,8 +70,9 @@ def get_user(user_id):
 @dp.message_handler(commands=['balance'])
 async def get_balance(message: types.Message):
     user = await get_user(message.from_user.id)
-    res = requests.get(f'https://sms-activate.ru/stubs/handler_api.php?'
-                       f'api_key=${user.api_key}&action=getBalance')
+    query_params = {'api_key': user.api_key, 'action': 'getBalance'}
+    res = requests.get(f'https://sms-activate.ru/stubs/handler_api.php',
+                       params=query_params)
     balance = res.text.split(':')[1]
     time.sleep(1)
     await message.answer(f'Баланс: {balance}')
@@ -82,7 +83,7 @@ async def get_sim(message: types.Message, state: FSMContext):
     user = await get_user(message.from_user.id)
     await States.get_service.set()
     async with state.proxy() as data:               # добавление данных в Хранилище состояний (MemoryStorage)
-        data['api_base_url'] = 'https://sms-activate.ru/stubs/handler_api.php?'
+        data['api_base_url'] = 'https://sms-activate.ru/stubs/handler_api.php'
         data['api_key'] = f'${user.api_key}'
         data['action'] = 'getNumber'
         data['country'] = '0'
@@ -101,12 +102,13 @@ def find_service(callback_name):
 async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     service = await find_service(callback_query.data)
-    time.sleep(1)
     async with state.proxy() as data:
         data['service'] = service.code
 
-    res = requests.get(data['api_base_url'] + 'api_key=' + data['api_key'] + '&action=' + data['action'] +
-                       '&service=' + data['service'] + '&country=' + data['country'])
+    url = data['api_base_url']
+    query_params = {'api_key': data['api_key'], 'action': data['action'], 'service': data['service'], 'country': data['country']}
+    res = requests.get(url, params=query_params)
+    time.sleep(1)
     number = res.text.split(':')[2]
     await bot.send_message(
         callback_query.from_user.id, f'Ваш номер для сервиса "{service.name}":\n {number[1:]}')
