@@ -10,7 +10,7 @@ from users.models import Users
 from .app import dp, bot
 
 from .messages import WELCOME_MESSAGE
-from .keyboards import SERVICES, HELP, ACCESS
+from .keyboards import SERVICES, HELP, ACCESS, ready_emoji
 from .states import States
 
 COMMANDS = '/help \n/balance \n/get_sim \n/lastsms'
@@ -123,9 +123,9 @@ async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
         async with state.proxy() as data:
             data['activation_id'] = activation_id
         phone = result[2][1:]
-        await bot.send_message(
-            callback_query.from_user.id, f'Ваш номер для сервиса "{service.name}":\n{phone}',
-            reply_markup=ACCESS)
+        await bot.send_message(callback_query.from_user.id, f'Ваш номер для сервиса "{service.name}":\n{phone}')
+        await bot.send_message(callback_query.from_user.id,
+                               f'Нажмите {ready_emoji} после того как смс будет отправлено', reply_markup=ACCESS)
     except IndexError:
         message = 'Нет номеров' if status == "NO_NUMBERS" else 'Закончился баланс'
         await bot.send_message(callback_query.from_user.id, message)
@@ -138,7 +138,7 @@ setStatus_responses = {'ACCESS_READY': 'готовность номера под
 
 
 @dp.callback_query_handler(lambda c: c.data in ['1', '8'], state=States.get_service)
-async def change_activation_status(callback_query: types.CallbackQuery, state: FSMContext):
+async def change_activation_status_and_get_sms(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     async with state.proxy() as data:
         status = callback_query.data
@@ -151,8 +151,57 @@ async def change_activation_status(callback_query: types.CallbackQuery, state: F
                     'status': data['status'],
                     'id': data['activation_id']}
 
-    set_status = requests.get(url, params=query_params)
+    change_activation_status = requests.get(url, params=query_params)
     time.sleep(1)
-    status_response = set_status.text
+    status_response = change_activation_status.text
     message = setStatus_responses[status_response]
     await bot.send_message(callback_query.from_user.id, message)
+    if status_response == 'ACCESS_READY':
+        await bot.send_message(callback_query.from_user.id, 'Ожидание смс: 60сек')
+
+    sms = await get_sms_code(data)
+    await bot.send_message(callback_query.from_user.id, f'смс-код: {sms}')
+
+
+@sync_to_async
+def get_sms_code(data):
+    action = 'getStatus'
+    url = data['api_base_url']
+    query_params = {
+        'api_key': data['api_key'],
+        'action': action,
+        'id': data['activation_id']
+    }
+    activation_state = get_activation_state(url, query_params)
+    sms_code = activation_state[1]
+    return sms_code
+
+
+def sleep_state(timeout, retry=12):
+    def the_real_decorator(function):
+        def wrapper(*args, **kwargs):
+            retries = 0
+            while retries < retry:
+                try:
+                    state = function(*args, **kwargs)
+                    sms_code = state[1]
+                    if sms_code:
+                        return state
+                except ValueError:
+                    time.sleep(timeout)
+                    retries += 1
+        return wrapper
+    return the_real_decorator
+
+
+@sleep_state(5)
+def get_activation_state(url, query_params):
+    try:
+        get_state = requests.get(url, params=query_params)
+        state = get_state.text.split(':')
+        return state
+    except requests.exceptions.Timeout as err:
+        # Отправка admin / log
+        print(f'The request timed out: {err.response} для {url}')
+        # Повторное поднятие ошибки исключения для декоратора
+        raise requests.exceptions.Timeout
