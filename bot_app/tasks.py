@@ -1,11 +1,10 @@
+import asyncio
+
 from bot_app.funcs import edit_message
 from sms_activate_bot.celery import app
 
 
-@app.task
-def timer_message_task(message_id, chat_id):
-    edit_message(message_id, chat_id)
-
+# @app.task
 # @periodic_task(run_every=crontab(minute=0, hour='6,18'))
 # def update_price(message):
 #     user = await get_user(message.from_user.id)

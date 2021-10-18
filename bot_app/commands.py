@@ -2,17 +2,19 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 import time
 import requests
+import asyncio
 from asgiref.sync import sync_to_async
+
 from django.core.exceptions import ObjectDoesNotExist
-import  asyncio
+
 from services.models import Services
 from users.models import Users
-from .app import dp, bot
 
+from .app import dp, bot
+from .funcs import edit_message, delete_message
 from .messages import WELCOME_MESSAGE
 from .keyboards import SERVICES, HELP, ACCESS, ready_emoji
 from .states import States
-from .tasks import timer_message_task
 
 COMMANDS = '/help \n/balance \n/get_sim \n/lastsms'
 
@@ -21,12 +23,6 @@ COMMANDS = '/help \n/balance \n/get_sim \n/lastsms'
 async def start_message(message: types.Message):
     time.sleep(0.5)
     await message.answer(WELCOME_MESSAGE, reply_markup=HELP)
-    timer_seconds = 60
-    timer_message = await bot.send_message(message.from_user.id, f'Ожидание смс: {timer_seconds} сек')
-    id_message = timer_message.message_id
-    id_chat = timer_message.chat.id
-
-    asyncio.run(timer_message_task(id_message, id_chat))
 
 
 @dp.message_handler(commands=['help'])
@@ -166,14 +162,17 @@ async def change_activation_status_and_get_sms(callback_query: types.CallbackQue
     status_response = change_activation_status.text
     message = setStatus_responses[status_response]
     await bot.send_message(callback_query.from_user.id, message)
+
+    timer_message, task_edit_message = None, None
     if status_response == 'ACCESS_READY':
         timer_seconds = 60
-        timer_message = await bot.send_message(callback_query.from_user.id, f'Ожидание смс: {timer_seconds} сек')
-        id_message = timer_message.message_id
-        id_chat = timer_message.chat.id
-        timer_message_task.apply_async((id_message, id_chat))
+        timer_message = await bot.send_message(callback_query.from_user.id, f'Ожидание смс: {timer_seconds}')
+        task_edit_message = asyncio.create_task(edit_message(message=timer_message, timer=timer_seconds - 1))
 
     sms = await get_sms_code(data)
+    if task_edit_message is not None:
+        task_edit_message.cancel()
+        await timer_message.delete()
     await bot.send_message(callback_query.from_user.id, f'смс-код: {sms}')
 
 
