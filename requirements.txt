@@ -4,3 +4,8 @@ django-environ
 aiogram
 requests
 aiohttp
+asgiref
+celery
+emoji
+redis
+flower
