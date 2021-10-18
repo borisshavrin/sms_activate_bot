@@ -7,3 +7,5 @@ aiohttp
 asgiref
 celery
 emoji
+redis
+flower

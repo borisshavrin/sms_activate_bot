@@ -4,7 +4,7 @@ import time
 import requests
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
-
+import  asyncio
 from services.models import Services
 from users.models import Users
 from .app import dp, bot
@@ -12,6 +12,7 @@ from .app import dp, bot
 from .messages import WELCOME_MESSAGE
 from .keyboards import SERVICES, HELP, ACCESS, ready_emoji
 from .states import States
+from .tasks import timer_message_task
 
 COMMANDS = '/help \n/balance \n/get_sim \n/lastsms'
 
@@ -20,6 +21,12 @@ COMMANDS = '/help \n/balance \n/get_sim \n/lastsms'
 async def start_message(message: types.Message):
     time.sleep(0.5)
     await message.answer(WELCOME_MESSAGE, reply_markup=HELP)
+    timer_seconds = 60
+    timer_message = await bot.send_message(message.from_user.id, f'Ожидание смс: {timer_seconds} сек')
+    id_message = timer_message.message_id
+    id_chat = timer_message.chat.id
+
+    asyncio.run(timer_message_task(id_message, id_chat))
 
 
 @dp.message_handler(commands=['help'])
@@ -100,8 +107,11 @@ def find_service(callback_name):
     return service
 
 
-@dp.callback_query_handler(lambda c: c.data in ['5ka', 'samokat', 'bk', 'ozon', 'dc', 'all'],
-                           state=States.get_service)
+services_queryset = Services.objects.all()
+services_callback_name_list = [service.callback_name for service in services_queryset]
+
+
+@dp.callback_query_handler(lambda c: c.data in services_callback_name_list, state=States.get_service)
 async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
     """Ф-ия срабатывает при выборе сервиса, нажатием на кнопку"""
     await bot.answer_callback_query(callback_query.id)
@@ -157,7 +167,11 @@ async def change_activation_status_and_get_sms(callback_query: types.CallbackQue
     message = setStatus_responses[status_response]
     await bot.send_message(callback_query.from_user.id, message)
     if status_response == 'ACCESS_READY':
-        await bot.send_message(callback_query.from_user.id, 'Ожидание смс: 60сек')
+        timer_seconds = 60
+        timer_message = await bot.send_message(callback_query.from_user.id, f'Ожидание смс: {timer_seconds} сек')
+        id_message = timer_message.message_id
+        id_chat = timer_message.chat.id
+        timer_message_task.apply_async((id_message, id_chat))
 
     sms = await get_sms_code(data)
     await bot.send_message(callback_query.from_user.id, f'смс-код: {sms}')
@@ -187,7 +201,7 @@ def sleep_state(timeout, retry=12):
                     sms_code = state[1]
                     if sms_code:
                         return state
-                except ValueError:
+                except IndexError:
                     time.sleep(timeout)
                     retries += 1
         return wrapper
