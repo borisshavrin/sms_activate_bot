@@ -14,12 +14,16 @@ def get_sms_code(data):
         'id': data['activation_id']
     }
     activation_state = get_activation_state(url, query_params)
-    sms_code = activation_state[1]
-    return sms_code
+    try:
+        sms_code = activation_state[1]
+    except TypeError:
+        return None
+    else:
+        return sms_code
 
 
-def sleep_state(timeout, retry=12):
-    """ Декоратор, повторяющий запрос 12раз (60сек) или пока не будет получен смс-код """
+def sleep_state(timeout, retry=12 * 5):
+    """ Декоратор, повторяющий запрос каждые 5 сек (5мин) или пока не будет получен смс-код """
     def the_real_decorator(function):
         def wrapper(*args, **kwargs):
             retries = 0
@@ -41,9 +45,10 @@ def get_activation_state(url, query_params):
     try:
         get_state = requests.get(url, params=query_params)
         state = get_state.text.split(':')
-        return state
     except requests.exceptions.Timeout as err:
         # Отправка admin / log
         print(f'The request timed out: {err.response} для {url}')
         # Повторное поднятие ошибки исключения для декоратора
         raise requests.exceptions.Timeout
+    else:
+        return state

@@ -10,7 +10,7 @@ from users.models import Users
 
 from .app import dp, bot
 from .messages import WELCOME_MESSAGE, COMMANDS, edit_message, setStatus_responses
-from .keyboards import SERVICES, HELP, ACCESS, ready_emoji
+from .keyboards import SERVICES, ACCESS, ready_emoji
 from .sms_code import get_sms_code
 from .states import States
 
@@ -18,7 +18,7 @@ from .states import States
 @dp.message_handler(commands=['start'], state='*')
 async def start_message(message: types.Message):
     await asyncio.sleep(0.5)
-    await message.answer(WELCOME_MESSAGE, reply_markup=HELP)
+    await message.answer(WELCOME_MESSAGE)
 
 
 @dp.message_handler(commands=['help'], state='*')
@@ -119,31 +119,57 @@ async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
 async def change_activation_status_and_get_sms(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     user_id = callback_query.from_user.id
+    status = callback_query.data                # 1 or 8
     async with state.proxy() as data:
-        status = callback_query.data
         data['action'] = 'setStatus'
         data['status'] = status
 
+    status_response = await change_activation_status(data, user_id)
+
+    if status_response == 'ACCESS_READY':
+        timer_minutes = 5
+        timer_message = await bot.send_message(user_id, f'Ожидание смс: {timer_minutes}:00')
+        task_edit_message = asyncio.create_task(edit_message(message=timer_message, timer=timer_minutes * 60 - 1))
+
+        try:
+            sms = await get_sms_code(data)
+            sms = sms[:]
+        except TypeError:
+            await bot.send_message(user_id, 'Смс не пришло')
+            async with state.proxy() as data:
+                data['status'] = '8'
+        else:
+            await bot.send_message(user_id, f'смс-код: {sms}')
+            await timer_message.delete()
+            async with state.proxy() as data:
+                data['status'] = '6'
+        finally:
+            task_edit_message.cancel()
+            await change_activation_status(data, user_id)
+
+
+async def change_activation_status(data, user_id):
     url = data['api_base_url']
     query_params = {'api_key': data['api_key'],
                     'action': data['action'],
                     'status': data['status'],
                     'id': data['activation_id']}
 
-    change_activation_status = requests.get(url, params=query_params)
+    change_status = requests.get(url, params=query_params)
     await asyncio.sleep(1)
-    status_response = change_activation_status.text
+    status_response = change_status.text
     message = setStatus_responses[status_response]
     await bot.send_message(user_id, message)
+    return status_response
 
-    timer_message, task_edit_message = None, None
-    if status_response == 'ACCESS_READY':
-        timer_seconds = 60
-        timer_message = await bot.send_message(user_id, f'Ожидание смс: {timer_seconds}')
-        task_edit_message = asyncio.create_task(edit_message(message=timer_message, timer=timer_seconds - 1))
 
-    sms = await get_sms_code(data)
-    if task_edit_message is not None:
-        task_edit_message.cancel()
-        await timer_message.delete()
-    await bot.send_message(user_id, f'смс-код: {sms}')
+@dp.callback_query_handler(lambda c: c.data in ['stop'], state=States.get_service)
+async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.answer_callback_query(callback_query.id)
+    user_id = callback_query.from_user.id
+    message = callback_query.message
+    async with state.proxy() as data:
+        data['status'] = '8'
+
+    await message.delete()
+    await change_activation_status(data, user_id)

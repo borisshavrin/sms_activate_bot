@@ -1,6 +1,7 @@
 import asyncio
 
 # text templates
+from bot_app.keyboards import STOP_TIMER
 
 COMMANDS = '/help \n/balance \n/get_sim'
 
@@ -20,8 +21,11 @@ setStatus_responses = {'ACCESS_READY': 'готовность номера под
 
 async def edit_message(message, timer):
     for seconds_left in range(timer, 0, -1):
+        minutes = seconds_left // 60
+        seconds = seconds_left - minutes * 60
+        seconds = '0' + str(seconds) if seconds < 10 else seconds
         await asyncio.sleep(1)
-        await message.edit_text(f'Ожидание смс: {seconds_left}')
+        await message.edit_text(f'Ожидание смс: {minutes}:{seconds}', reply_markup=STOP_TIMER)
 
         if seconds_left == 1:
             await message.delete()
