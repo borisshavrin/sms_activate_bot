@@ -9,3 +9,4 @@ celery
 emoji
 redis
 flower
+aioredis
