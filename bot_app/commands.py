@@ -9,10 +9,13 @@ from services.models import Services
 from users.models import Users
 
 from .app import dp, bot
-from .messages import WELCOME_MESSAGE, COMMANDS, edit_message, setStatus_responses
+from .messages import WELCOME_MESSAGE, COMMANDS
 from .keyboards import SERVICES, ACCESS, ready_emoji
-from .sms_code import get_sms_code
+from .operations import change_and_send_activation_status
+from .sms_code import start_timer_and_get_sms_code
 from .states import States
+
+SERVICES_CALLBACK_NAME_LIST = Services.get_callback_name_list()
 
 
 @dp.message_handler(commands=['start'], state='*')
@@ -80,11 +83,8 @@ async def get_sim(message: types.Message, state: FSMContext):
     await message.answer('Выберите сервис:', reply_markup=SERVICES)
 
 
-services_callback_name_list = Services.get_callback_name_list()
-
-
-@dp.callback_query_handler(lambda c: c.data in services_callback_name_list, state=States.get_service)
-async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
+@dp.callback_query_handler(lambda c: c.data in SERVICES_CALLBACK_NAME_LIST, state=States.get_service)
+async def get_number_for_chosen_service(callback_query: types.CallbackQuery, state: FSMContext):
     """Ф-ия срабатывает при выборе сервиса, нажатием на кнопку"""
     await bot.answer_callback_query(callback_query.id)
     callback_name = callback_query.data
@@ -116,51 +116,18 @@ async def get_service(callback_query: types.CallbackQuery, state: FSMContext):
 
 
 @dp.callback_query_handler(lambda c: c.data in ['1', '8'], state=States.get_service)
-async def change_activation_status_and_get_sms(callback_query: types.CallbackQuery, state: FSMContext):
+async def get_sms_code(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
+    await callback_query.message.edit_reply_markup(reply_markup=None)
     user_id = callback_query.from_user.id
     status = callback_query.data                # 1 or 8
     async with state.proxy() as data:
         data['action'] = 'setStatus'
         data['status'] = status
 
-    status_response = await change_activation_status(data, user_id)
-
+    status_response = await change_and_send_activation_status(data, user_id)
     if status_response == 'ACCESS_READY':
-        timer_minutes = 5
-        timer_message = await bot.send_message(user_id, f'Ожидание смс: {timer_minutes}:00')
-        task_edit_message = asyncio.create_task(edit_message(message=timer_message, timer=timer_minutes * 60 - 1))
-
-        try:
-            sms = await get_sms_code(data)
-            sms = sms[:]
-        except TypeError:
-            await bot.send_message(user_id, 'Смс не пришло')
-            async with state.proxy() as data:
-                data['status'] = '8'
-        else:
-            await bot.send_message(user_id, f'смс-код: {sms}')
-            await timer_message.delete()
-            async with state.proxy() as data:
-                data['status'] = '6'
-        finally:
-            task_edit_message.cancel()
-            await change_activation_status(data, user_id)
-
-
-async def change_activation_status(data, user_id):
-    url = data['api_base_url']
-    query_params = {'api_key': data['api_key'],
-                    'action': data['action'],
-                    'status': data['status'],
-                    'id': data['activation_id']}
-
-    change_status = requests.get(url, params=query_params)
-    await asyncio.sleep(1)
-    status_response = change_status.text
-    message = setStatus_responses[status_response]
-    await bot.send_message(user_id, message)
-    return status_response
+        await start_timer_and_get_sms_code(user_id=user_id, state=state)
 
 
 @dp.callback_query_handler(lambda c: c.data in ['stop'], state=States.get_service)
@@ -172,4 +139,4 @@ async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
         data['status'] = '8'
 
     await message.delete()
-    await change_activation_status(data, user_id)
+    await change_and_send_activation_status(data, user_id)
