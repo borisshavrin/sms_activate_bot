@@ -12,7 +12,7 @@ from .app import dp, bot
 from .messages import WELCOME_MESSAGE, COMMANDS
 from .keyboards import ACCESS, ready_emoji, get_service_keyboard
 from .operations import change_and_send_activation_status
-from .sms_code import start_timer_and_get_sms_code
+from .sms_code import start_timer_and_get_sms_code, TASKS
 from .states import States
 
 SERVICES_CALLBACK_NAME_LIST = Services.get_callback_name_list()
@@ -79,6 +79,7 @@ async def get_sim(message: types.Message, state: FSMContext):
         data['api_key'] = user.api_key
         data['action'] = 'getNumber'
         data['country'] = '0'
+        data['user_id'] = user_id
     await asyncio.sleep(1)
     service_keyboard = await get_service_keyboard()
     await message.answer('Выберите сервис:', reply_markup=service_keyboard)
@@ -133,16 +134,23 @@ async def get_sms_code(callback_query: types.CallbackQuery, state: FSMContext):
 
     status_response = await change_and_send_activation_status(data, user_id)
     if status_response == 'ACCESS_READY':
-        await start_timer_and_get_sms_code(user_id=user_id, state=state)
+        task_sms = asyncio.create_task(
+            start_timer_and_get_sms_code(user_id=user_id, state=state),
+            name='sms'
+        )
+        TASKS[f'{user_id}-sms'] = task_sms
 
 
 @dp.callback_query_handler(lambda c: c.data in ['stop'], state=States.get_service)
 async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     user_id = callback_query.from_user.id
+    task_timer = TASKS[f'{user_id}-timer']
+    task_sms = TASKS[f'{user_id}-sms']
+    task_timer.cancel()
     message = callback_query.message
     async with state.proxy() as data:
         data['status'] = '8'
-
     await message.delete()
     await change_and_send_activation_status(data, user_id)
+    task_sms.cancel()
