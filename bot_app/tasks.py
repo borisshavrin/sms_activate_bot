@@ -1,7 +1,7 @@
 import asyncio
 
-from bot_app.funcs import edit_message
-from sms_activate_bot.celery import app
+# from bot_app.sms_code import edit_message
+# from sms_activate_bot.celery import app
 
 
 # @app.task
