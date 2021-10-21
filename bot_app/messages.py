@@ -16,10 +16,10 @@ WELCOME_MESSAGE = '''
 /send_api_key - отправить свой API-ключ\n
 /help - для получения списка команд\n'''
 
-SET_STATUS_RESPONSES = {'ACCESS_READY': 'готовность номера подтверждена',
-                        'ACCESS_RETRY_GET': 'ожидание нового смс',
-                        'ACCESS_ACTIVATION': 'сервис успешно активирован',
-                        'ACCESS_CANCEL': 'активация отменена'}
+SET_STATUS_RESPONSES = {'ACCESS_READY': 'Готовность номера подтверждена',
+                        'ACCESS_RETRY_GET': 'Ожидание нового смс',
+                        'ACCESS_ACTIVATION': 'Сервис успешно активирован',
+                        'ACCESS_CANCEL': 'Активация отменена'}
 
 
 # funcs

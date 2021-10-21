@@ -1,15 +1,17 @@
 import asyncio
 import time
-from typing import Union
 
 import requests
 from aiogram.dispatcher.storage import FSMContext, FSMContextProxy
 from aiogram.types.base import Integer
 from asgiref.sync import sync_to_async
 
+from activations.models import Activations
 from bot_app.app import bot
 from bot_app.messages import edit_timer_message, send_timer_message
 from bot_app.operations import change_and_send_activation_status
+from services.models import Services
+from users.models import Users
 
 
 def sleep_state(timeout: int, retry=12 * 5):
@@ -75,10 +77,20 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
         async with state.proxy() as data:
             data['status'] = '8'
     else:
-        await bot.send_message(user_id, f'смс-код: {sms}')
+        await bot.send_message(user_id, f'Ваш код: {int(sms)}')
         await timer_message.delete()
         async with state.proxy() as data:
             data['status'] = '6'
+            """Внесение активации в БД"""
+            user = await Users.get_user(user_id=user_id)
+            service = await Services.get_service_by_code(code=data['service'])
+            await Activations.create_activation(
+                id_activation=data['activation_id'],
+                user=user,
+                service=service,
+                number=int(data['phone']),
+                sms=int(sms)
+            )
     finally:
         task_edit_message.cancel()
         await change_and_send_activation_status(data, user_id)

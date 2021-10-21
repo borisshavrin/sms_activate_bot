@@ -10,7 +10,7 @@ from users.models import Users
 
 from .app import dp, bot
 from .messages import WELCOME_MESSAGE, COMMANDS
-from .keyboards import SERVICES, ACCESS, ready_emoji
+from .keyboards import ACCESS, ready_emoji, get_service_keyboard
 from .operations import change_and_send_activation_status
 from .sms_code import start_timer_and_get_sms_code
 from .states import States
@@ -80,7 +80,8 @@ async def get_sim(message: types.Message, state: FSMContext):
         data['action'] = 'getNumber'
         data['country'] = '0'
     await asyncio.sleep(1)
-    await message.answer('Выберите сервис:', reply_markup=SERVICES)
+    service_keyboard = await get_service_keyboard()
+    await message.answer('Выберите сервис:', reply_markup=service_keyboard)
 
 
 @dp.callback_query_handler(lambda c: c.data in SERVICES_CALLBACK_NAME_LIST, state=States.get_service)
@@ -88,7 +89,11 @@ async def get_number_for_chosen_service(callback_query: types.CallbackQuery, sta
     """Ф-ия срабатывает при выборе сервиса, нажатием на кнопку"""
     await bot.answer_callback_query(callback_query.id)
     callback_name = callback_query.data
-    service = await Services.find_service(callback_name)
+
+    change_service_keyboard = await get_service_keyboard(callback_name)
+    await callback_query.message.edit_reply_markup(reply_markup=change_service_keyboard)
+
+    service = await Services.get_service_by_callback(callback_name)
     async with state.proxy() as data:
         data['service'] = service.code
 
@@ -109,6 +114,7 @@ async def get_number_for_chosen_service(callback_query: types.CallbackQuery, sta
     else:
         async with state.proxy() as data:
             data['activation_id'] = activation_id
+            data['phone'] = phone
 
         await bot.send_message(callback_query.from_user.id, f'Ваш номер для сервиса "{service.name}":\n{phone}')
         await bot.send_message(callback_query.from_user.id,
