@@ -1,3 +1,5 @@
+import base64
+
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 import requests
@@ -6,6 +8,7 @@ import asyncio
 from django.core.exceptions import ObjectDoesNotExist
 
 from services.models import Services
+from sms_activate_bot.settings import SALT
 from users.models import Users
 
 from .app import dp, bot
@@ -32,14 +35,15 @@ async def help_message(message: types.Message):
 
 
 @dp.message_handler(commands=['send_api_key'], state='*')
-async def send_api_key(message: types.Message, state: FSMContext):
+async def send_api_key(message: types.Message):
     await States.get_api_key.set()          # установка состояния
     await message.answer('Для добавления ключа, отправь его следующим сообщением')
 
 
 @dp.message_handler(content_types=["text"], state=States.get_api_key)
-async def get_api_key(message: types.Message, state: FSMContext):
-    api_key = message.text
+async def get_api_key(message: types.Message):
+    api_key_b = str.encode(message.text + SALT, encoding='utf-8')
+    api_key = base64.b64encode(api_key_b)
     user_id = message.from_user.id
     try:
         user = await Users.get_user(user_id)
@@ -47,7 +51,7 @@ async def get_api_key(message: types.Message, state: FSMContext):
         await Users.create_user(user_id, api_key)
         await message.answer('Пользователь создан!')
     else:
-        user.update_api_key(api_key)
+        await user.update_api_key(api_key)
         await message.answer('Ключ обновлен!')
     finally:
         await asyncio.sleep(0.5)
@@ -59,7 +63,8 @@ async def get_api_key(message: types.Message, state: FSMContext):
 async def get_balance(message: types.Message):
     user_id = message.from_user.id
     user = await Users.get_user(user_id)
-    query_params = {'api_key': user.api_key,
+    api_key = base64.b64decode(user.api_key).decode('utf-8')[:-len(SALT)]
+    query_params = {'api_key': api_key,
                     'action': 'getBalance'}
     url = 'https://sms-activate.ru/stubs/handler_api.php'
     res = requests.get(url, params=query_params)
@@ -72,11 +77,12 @@ async def get_balance(message: types.Message):
 async def get_sim(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user = await Users.get_user(user_id)
+    api_key = base64.b64decode(user.api_key).decode('utf-8')[:-len(SALT)]
     await States.get_service.set()
     async with state.proxy() as data:
         """ Добавление данных в Хранилище состояний (Redis) """
         data['api_base_url'] = 'https://sms-activate.ru/stubs/handler_api.php'
-        data['api_key'] = user.api_key
+        data['api_key'] = api_key
         data['action'] = 'getNumber'
         data['country'] = '0'
         data['user_id'] = user_id
