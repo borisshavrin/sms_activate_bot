@@ -127,6 +127,7 @@ async def get_sms_code(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     await callback_query.message.edit_reply_markup(reply_markup=None)
     user_id = callback_query.from_user.id
+    message = callback_query.message
     status = callback_query.data                # 1 or 8
     async with state.proxy() as data:
         data['action'] = 'setStatus'
@@ -138,17 +139,19 @@ async def get_sms_code(callback_query: types.CallbackQuery, state: FSMContext):
             start_timer_and_get_sms_code(user_id=user_id, state=state),
             name='sms'
         )
-        TASKS[f'{user_id}-sms'] = task_sms
+        TASKS[f'{user_id}-{message.message_id}-sms'] = task_sms
 
 
 @dp.callback_query_handler(lambda c: c.data in ['stop'], state=States.get_service)
 async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     user_id = callback_query.from_user.id
-    task_timer = TASKS[f'{user_id}-timer']
-    task_sms = TASKS[f'{user_id}-sms']
-    task_timer.cancel()
     message = callback_query.message
+
+    task_timer = TASKS[f'{user_id}-{message.message_id}-timer']
+    task_sms = TASKS[f'{user_id}-{message.message_id - 2}-sms']
+    task_timer.cancel()
+
     async with state.proxy() as data:
         data['status'] = '8'
     await message.delete()

@@ -35,8 +35,7 @@ def sleep_state(timeout: int, retry=12 * 5):
 
 
 @sync_to_async
-def get_sms_code(data: FSMContextProxy):
-    user_id = data['user_id']
+def get_sms_code(data: FSMContextProxy, task_edit_message):
     action = 'getStatus'
     url = data['api_base_url']
     query_params = {
@@ -44,7 +43,7 @@ def get_sms_code(data: FSMContextProxy):
         'action': action,
         'id': data['activation_id']
     }
-    activation_state = get_activation_state(url, query_params, user_id)
+    activation_state = get_activation_state(url, query_params, task_edit_message)
     try:
         sms_code = activation_state[1]
     except TypeError:
@@ -54,7 +53,7 @@ def get_sms_code(data: FSMContextProxy):
 
 
 @sleep_state(5)
-def get_activation_state(url: str, query_params, user_id):
+def get_activation_state(url: str, query_params, task_edit_message):
     try:
         get_state = requests.get(url, params=query_params)
         state = get_state.text.split(':')
@@ -64,7 +63,7 @@ def get_activation_state(url: str, query_params, user_id):
         # Повторное поднятие ошибки исключения для декоратора
         raise requests.exceptions.Timeout
     else:
-        if TASKS[f'{user_id}-timer'].done():
+        if task_edit_message.done():
             state.append('sms-code')                # Костыль, позволяющий завершить цикл while досрочно
         return state
 
@@ -75,11 +74,11 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
         edit_timer_message(message=timer_message, timer=timer_minutes * 60 - 1),
         name='timer'
     )
-    TASKS[f'{user_id}-timer'] = task_edit_message
+    TASKS[f'{user_id}-{timer_message.message_id}-timer'] = task_edit_message
 
     try:
         async with state.proxy() as data:
-            sms = await get_sms_code(data)
+            sms = await get_sms_code(data, task_edit_message)
             sms = sms[:]
     except TypeError:
         await bot.send_message(user_id, 'Смс не пришло')
