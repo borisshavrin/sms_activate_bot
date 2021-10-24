@@ -10,3 +10,4 @@ emoji
 redis
 flower
 aioredis
+cryptography

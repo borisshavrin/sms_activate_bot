@@ -9,7 +9,7 @@ class Users(models.Model):
         unique=True,
     )
 
-    api_key = models.CharField(
+    api_key = models.BinaryField(
         verbose_name='API-ключ',
         max_length=128,
         blank=True,

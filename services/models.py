@@ -27,6 +27,9 @@ class Services(models.Model):
         decimal_places=2,
     )
 
+    class Meta:
+        ordering = ['name']
+
     @staticmethod
     @sync_to_async
     def get_service_by_callback(callback_name):

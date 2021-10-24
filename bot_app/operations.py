@@ -5,7 +5,7 @@ from aiogram.dispatcher.storage import FSMContextProxy
 
 from aiogram.types.base import Integer
 
-from bot_app.messages import send_status_message
+from .messages import send_status_message
 
 
 async def change_and_send_activation_status(data: FSMContextProxy, user_id: Integer):
