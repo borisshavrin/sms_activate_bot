@@ -1,5 +1,3 @@
-import base64
-
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 import requests
@@ -9,7 +7,6 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from crypto import crypto
 from services.models import Services
-from sms_activate_bot.settings import SALT
 from users.models import Users
 
 from .app import dp, bot
@@ -89,6 +86,7 @@ async def get_sim(message: types.Message, state: FSMContext):
         data['action'] = 'getNumber'
         data['country'] = '0'
         data['user_id'] = user_id
+        data['page'] = 1
     await asyncio.sleep(1)
     service_keyboard = await get_service_keyboard()
     await message.answer('Выберите сервис:', reply_markup=service_keyboard)
@@ -100,12 +98,12 @@ async def get_number_for_chosen_service(callback_query: types.CallbackQuery, sta
     await bot.answer_callback_query(callback_query.id)
     callback_name = callback_query.data
 
-    change_service_keyboard = await get_service_keyboard(callback_name)
-    await callback_query.message.edit_reply_markup(reply_markup=change_service_keyboard)
-
     service = await Services.get_service_by_callback(callback_name)
     async with state.proxy() as data:
         data['service'] = service.code
+
+    change_service_keyboard = await get_service_keyboard(callback_name, current_page=data['page'])
+    await callback_query.message.edit_reply_markup(reply_markup=change_service_keyboard)
 
     url = data['api_base_url']
     query_params = {'api_key': data['api_key'],
@@ -166,3 +164,20 @@ async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
     await message.delete()
     await change_and_send_activation_status(data, user_id)
     task_sms.cancel()
+
+
+@dp.callback_query_handler(lambda c: c.data in ['<-', '->'], state=States.get_service)
+async def paginator_services(callback_query: types.CallbackQuery, state: FSMContext):
+    await bot.answer_callback_query(callback_query.id)
+    callback_name = callback_query.data
+
+    async with state.proxy() as data:
+        if callback_name == '<-':
+            data['page'] -= 1
+        else:
+            data['page'] += 1
+
+    change_service_keyboard = await get_service_keyboard(current_page=data['page'])
+    await callback_query.message.edit_reply_markup(reply_markup=change_service_keyboard)
+
+

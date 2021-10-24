@@ -6,7 +6,7 @@ from sms_activate_bot.settings import BASE_DIR
 def write_key():
     """Создание ключа и сохранение в файл"""
     key = Fernet.generate_key()
-    with open('/crypto.key', 'wb') as key_file:
+    with open(f'{BASE_DIR}/crypto/crypto.key', 'wb') as key_file:
         key_file.write(key)
 
 
