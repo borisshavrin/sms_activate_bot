@@ -7,6 +7,7 @@ import asyncio
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from crypto import crypto
 from services.models import Services
 from sms_activate_bot.settings import SALT
 from users.models import Users
@@ -42,8 +43,8 @@ async def send_api_key(message: types.Message):
 
 @dp.message_handler(content_types=["text"], state=States.get_api_key)
 async def get_api_key(message: types.Message):
-    api_key_b = str.encode(message.text + SALT, encoding='utf-8')
-    api_key = base64.b64encode(api_key_b)
+    text_b = message.text.encode('utf-8')
+    api_key = crypto.encrypt(text_b)
     user_id = message.from_user.id
     try:
         user = await Users.get_user(user_id)
@@ -63,7 +64,8 @@ async def get_api_key(message: types.Message):
 async def get_balance(message: types.Message):
     user_id = message.from_user.id
     user = await Users.get_user(user_id)
-    api_key = base64.b64decode(user.api_key).decode('utf-8')[:-len(SALT)]
+    text_b = crypto.decrypt(user.api_key)
+    api_key = text_b.decode('utf-8')
     query_params = {'api_key': api_key,
                     'action': 'getBalance'}
     url = 'https://sms-activate.ru/stubs/handler_api.php'
@@ -77,7 +79,8 @@ async def get_balance(message: types.Message):
 async def get_sim(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user = await Users.get_user(user_id)
-    api_key = base64.b64decode(user.api_key).decode('utf-8')[:-len(SALT)]
+    text_b = crypto.decrypt(user.api_key)
+    api_key = text_b.decode('utf-8')
     await States.get_service.set()
     async with state.proxy() as data:
         """ Добавление данных в Хранилище состояний (Redis) """
