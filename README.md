@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/PRs-friendly-orange.svg?style=flat">
   <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/borisshavrin/sms_activate_bot?color=purple">
   <img alt="GitHub pull requests" src="https://img.shields.io/github/issues-pr/borisshavrin/sms_activate_bot">
+  <img alt="GitHub closed pull requests" src="https://img.shields.io/github/issues-pr-closed/borisshavrin/sms_activate_bot">
 </p>
 
 ## название 
