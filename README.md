@@ -1,4 +1,4 @@
-# sms_activate_bot
+<h1 align="center">sms_activate_bot</h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/made%20by-borisshavrin-brightgreen.svg" >
