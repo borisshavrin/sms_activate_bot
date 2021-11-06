@@ -15,6 +15,7 @@ from .keyboards import ACCESS, ready_emoji, get_service_keyboard
 from .operations import change_and_send_activation_status
 from .sms_code import start_timer_and_get_sms_code, TASKS
 from .states import States
+from services.update_price import update_service_price
 
 SERVICES_CALLBACK_NAME_LIST = Services.get_callback_name_list()
 
@@ -88,6 +89,7 @@ async def get_sim(message: types.Message, state: FSMContext):
         data['user_id'] = user_id
         data['page'] = 1
     await asyncio.sleep(1)
+    asyncio.create_task(update_service_price(user_id, api_key))
     service_keyboard = await get_service_keyboard()
     await message.answer('Выберите сервис:', reply_markup=service_keyboard)
 
@@ -179,5 +181,3 @@ async def paginator_services(callback_query: types.CallbackQuery, state: FSMCont
 
     change_service_keyboard = await get_service_keyboard(current_page=data['page'])
     await callback_query.message.edit_reply_markup(reply_markup=change_service_keyboard)
-
-

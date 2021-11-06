@@ -47,3 +47,15 @@ class Services(models.Model):
         services_queryset = Services.objects.all()
         services_callback_name_list = [service.callback_name for service in services_queryset]
         return services_callback_name_list
+
+    @staticmethod
+    @sync_to_async
+    def get_code_list():
+        services_queryset = Services.objects.all()
+        services_code_list = [service.code for service in services_queryset]
+        return services_code_list
+
+    @sync_to_async
+    def update_price(self, price):
+        self.price = price
+        self.save()
