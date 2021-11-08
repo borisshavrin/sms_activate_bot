@@ -11,3 +11,4 @@ redis
 flower
 aioredis
 cryptography
+environ

@@ -64,7 +64,7 @@ def get_activation_state(url: str, query_params, task_edit_message):
         raise requests.exceptions.Timeout
     else:
         if task_edit_message.done():
-            state.append('sms-code')                # Костыль, позволяющий завершить цикл while досрочно
+            state.append('sms-code')                # Позволяет завершить цикл while досрочно
         return state
 
 
@@ -85,7 +85,8 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
         async with state.proxy() as data:
             data['status'] = '8'
     else:
-        await bot.send_message(user_id, f'Ваш код: {int(sms)}')
+        service = await Services.get_service_by_code(data['service'])
+        await bot.send_message(user_id, f'Ваш код для входа в {service.name}:\n{int(sms)}')
         await timer_message.delete()
         async with state.proxy() as data:
             data['status'] = '6'

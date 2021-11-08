@@ -7,9 +7,9 @@ from services.models import Services
 
 # emoji
 
-choice_emoji = emoji.emojize('👈🏻')
-ready_emoji = emoji.emojize('✅')
-cancel_emoji = emoji.emojize('❌')
+choice_emoji = emoji.emojize(':backhand_index_pointing_left_light_skin_tone:')
+ready_emoji = emoji.emojize(':check_mark_button:')
+cancel_emoji = emoji.emojize(':cross_mark:')
 stop_timer_emoji = emoji.emojize('🙅‍♂️')
 SERVICES_QUERYSET = Services.objects.all()
 

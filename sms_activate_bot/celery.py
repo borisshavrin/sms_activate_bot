@@ -8,3 +8,11 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 # celery beat tasks
+
+# app.conf.beat_schedule = {
+#     'add-every-30-seconds': {
+#         'task': 'bot_app.tasks.periodic',
+#         'schedule': 10.0,
+#     },
+# }
+# app.conf.timezone = 'UTC'
