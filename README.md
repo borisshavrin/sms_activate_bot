@@ -66,14 +66,29 @@ if __name__ == "__main__":
 ```
 
 
-#### 2. Работа с командами
+#### 2. Работа с командами и кнопками
   
-  > Отлавливаем команды, например /send_api_key, с помощью декоратора .message_handler:
+  > Отлавливаем сообщение (например, команду /send_api_key) с помощью декоратора .message_handler:
+  
   ```python
   @dp.message_handler(commands=['send_api_key'], state='*')
   async def send_api_key(message: types.Message):
+    ...
+    await message.answer('Для добавления ключа, отправь его следующим сообщением')
   ```  
-    > Установка состояния, при котором бот будет отлавливать текст, полученный в следующем сообщении от пользователя
+  > Отлавливаем callback (нажатие на кнопку) с помощью декоратора .callback_query_handler.  
+  В качестве аргументов указываем список кнопок (а именно их callback_name`s) и состояние, для которого данная функция должна отработать:
+  ```python
+  @dp.callback_query_handler(lambda c: c.data in SERVICES_CALLBACK_NAME_LIST, state=States.get_service)
+  async def get_number_for_chosen_service(callback_query: types.CallbackQuery, state: FSMContext):
+    """Ф-ия срабатывает при выборе сервиса, нажатием на кнопку"""
+    await bot.answer_callback_query(callback_query.id)
+    callback_name = callback_query.data
+    ...
+  ```
+    
+  
+  #### 3. Создание и установка состояний, позволяющих определить когда и какие функции должны отработать:
   ```python
       await States.get_api_key.set()
       await message.answer('Для добавления ключа, отправь его следующим сообщением')
@@ -87,21 +102,7 @@ if __name__ == "__main__":
   ```
   > Полученный текст (API-key) зашифровываем с помощью [crypto.py][3]
   ```python
-    text_b = message.text.encode('utf-8')
-    api_key = crypto.encrypt(text_b)
-    user_id = message.from_user.id
-    try:
-        user = await Users.get_user(user_id)
-    except ObjectDoesNotExist:
-        await Users.create_user(user_id, api_key)
-        await message.answer('Пользователь создан!')
-    else:
-        await user.update_api_key(api_key)
-        await message.answer('Ключ обновлен!')
-    finally:
-        await asyncio.sleep(0.5)
-        await States.api_key_ready.set()
-        await message.answer('Теперь вам доступен заказ номеров, воспользуйтесь командой /get_sim')
+
   ```
 
   
