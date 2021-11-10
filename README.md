@@ -47,7 +47,7 @@
   
 #### 1. Настройка и запуск бота
 
-  > Иницаилизация
+  > Иницаилизация в [bot/app.py][9]:
 ```python
 from aiogram import Bot, Dispatcher
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 ```
 
 
-#### 2. Работа с командами и кнопками
+#### 2. Работа с командами и кнопками в [commands.py][8]
   
   > Отлавливаем сообщение (например, команду /send_api_key) с помощью декоратора .message_handler:
   
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     await message.answer('Для добавления ключа, отправь его следующим сообщением')
   ```  
   > Отлавливаем callback (нажатие на кнопку) с помощью декоратора .callback_query_handler.  
-  В качестве аргументов указываем список кнопок (а именно их callback_name`s) и состояние, для которого данная функция должна отработать:
+  В качестве аргументов указываем **список кнопок** (а именно их callback_name`s), при нажатии на которые вызывается данная функция, и **состояние**, для которого данная функция должна отработать:
   ```python
   @dp.callback_query_handler(lambda c: c.data in SERVICES_CALLBACK_NAME_LIST, state=States.get_service)
   async def get_number_for_chosen_service(callback_query: types.CallbackQuery, state: FSMContext):
@@ -88,22 +88,25 @@ if __name__ == "__main__":
   ```
     
   
-  #### 3. Создание и установка состояний, позволяющих определить когда и какие функции должны отработать:
+  #### 3. Создание и установка состояний, позволяющих определить, когда и какие функции должны отработать
+  > Создаем состояния в [states.py][7]:  
   ```python
-      await States.get_api_key.set()
-      await message.answer('Для добавления ключа, отправь его следующим сообщением')
+  from aiogram.dispatcher.filters.state import State, StatesGroup
+
+
+  class States(StatesGroup):
+    get_service = State()
+    get_api_key = State()
+    api_key_ready = State()
   ```  
-    
-
-  > В функции отлова следующего сообщения указываем необходимое состояние в параметре state:
+  > Устанавливаем состояние в [commands.py][8]:
   ```python
-  @dp.message_handler(content_types=["text"], state=States.get_api_key)
-  async def get_api_key(message: types.Message):
-  ```
-  > Полученный текст (API-key) зашифровываем с помощью [crypto.py][3]
-  ```python
+  @dp.message_handler(commands=['send_api_key'], state='*')
+  async def send_api_key(message: types.Message):
+    await States.get_api_key.set()                          # установка состояния
+    await message.answer('Для добавления ключа, отправь его следующим сообщением')
+  ```  
 
-  ```
 
   
   
@@ -113,3 +116,6 @@ if __name__ == "__main__":
 [4]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/commands.py#:~:text=data%5B%27page%27%5D%20%3D%201-,await%20asyncio.sleep(1),asyncio.create_task(update_service_price(user_id%2C%20api_key)),-service_keyboard%20%3D%20await%20get_service_keyboard
 [5]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/commands.py#:~:text=await%20States.get_service,data%5B%27page%27%5D%20%3D%201
 [6]: https://github.com/borisshavrin/sms_activate_bot/blob/48a4d107475ad997b2e9e028cf8ee9dff6a2673c/main.py
+[7]: https://github.com/borisshavrin/sms_activate_bot/blob/bd0828f2c2bfe8792bd5ff0958df8dc81a1b6670/bot_app/states.py
+[8]: https://github.com/borisshavrin/sms_activate_bot/blob/48a4d107475ad997b2e9e028cf8ee9dff6a2673c/bot_app/commands.py
+[9]: https://github.com/borisshavrin/sms_activate_bot/blob/bd0828f2c2bfe8792bd5ff0958df8dc81a1b6670/bot_app/app.py
