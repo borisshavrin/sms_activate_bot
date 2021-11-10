@@ -27,6 +27,12 @@
   
   
 ### Технологии в проекте
+- Python 3.8 + Django 3 + [Aiogram][2]
+- SQLite/PostgreSQL
+- [cryptography][3]
+- Redis
+- [asyncio][4]
+  
 Бот написан на Python 3.8 + Django 3 + [Aiogram][2], имеет ORM (БД: SQLite с возможностью перехода на PostgreSQL). Пароли (API-keys) пользователей хранятся в БД в зашифрованном с помощью библиотеки [cryptography][3] виде. Для хранения временных данных (например, параметры API-запросов) используется БД Redis, получающая эти данные в роли [Хранилища состояний][5] (State). Для создания фоновых задач помогает библиотека [asyncio][4].
 
   
@@ -38,18 +44,18 @@
 -----
 (установка, настройка, как помочь проекту).
   
-> Иницаилизируем бота:
   
+#### 1. Настройка и запуск бота
+
+  > Иницаилизация
 ```python
 from aiogram import Bot, Dispatcher
 
 bot = Bot(token='your_token')
 dp = Dispatcher(bot, storage='your_storage')
 ```
-  
-  
+
 > Запуск в терминале: python [main.py][6]
-  
 ```python
 from aiogram import executor
 
@@ -58,7 +64,48 @@ from bot_app import dp
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
 ```
- 
+
+
+#### 2. Работа с командами
+  
+  > Отлавливаем команды, например /send_api_key, с помощью декоратора .message_handler:
+  ```python
+  @dp.message_handler(commands=['send_api_key'], state='*')
+  async def send_api_key(message: types.Message):
+  ```  
+    > Установка состояния, при котором бот будет отлавливать текст, полученный в следующем сообщении от пользователя
+  ```python
+      await States.get_api_key.set()
+      await message.answer('Для добавления ключа, отправь его следующим сообщением')
+  ```  
+    
+
+  > В функции отлова следующего сообщения указываем необходимое состояние в параметре state:
+  ```python
+  @dp.message_handler(content_types=["text"], state=States.get_api_key)
+  async def get_api_key(message: types.Message):
+  ```
+  > Полученный текст (API-key) зашифровываем с помощью [crypto.py][3]
+  ```python
+    text_b = message.text.encode('utf-8')
+    api_key = crypto.encrypt(text_b)
+    user_id = message.from_user.id
+    try:
+        user = await Users.get_user(user_id)
+    except ObjectDoesNotExist:
+        await Users.create_user(user_id, api_key)
+        await message.answer('Пользователь создан!')
+    else:
+        await user.update_api_key(api_key)
+        await message.answer('Ключ обновлен!')
+    finally:
+        await asyncio.sleep(0.5)
+        await States.api_key_ready.set()
+        await message.answer('Теперь вам доступен заказ номеров, воспользуйтесь командой /get_sim')
+  ```
+
+  
+  
 [1]: https://sms-activate.ru/ru/api2
 [2]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/app.py#:~:text=storage%20%3D%20RedisStorage2(host,bot%2C%20storage%3Dstorage)
 [3]: https://github.com/borisshavrin/sms_activate_bot/blob/59f819609db73bbb362752e29224a4030e8e661e/crypto/crypto.py
