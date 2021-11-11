@@ -143,7 +143,7 @@ if __name__ == "__main__":
     api_key = crypto.encrypt(text_b)
     ...
 ```
-> Расшифровка и помещение ключа в Хранилище состояний для дальнейшего использования уже без обращения к основной БД:
+> Расшифровка ключа:
 ```python
   @dp.message_handler(commands=['get_sim'], state='*')
   async def get_sim(message: types.Message, state: FSMContext):
@@ -151,14 +151,120 @@ if __name__ == "__main__":
     user = await Users.get_user(user_id)
     text_b = crypto.decrypt(user.api_key)
     api_key = text_b.decode('utf-8')
-    await States.get_service.set()
+    ...
+```  
+  
+#### 5. Использование Хранилища состояний
+  
+> Запись данных:
+```python
+  @dp.callback_query_handler(lambda c: c.data in SERVICES_CALLBACK_NAME_LIST, state=States.get_service)
+  async def get_number_for_chosen_service(callback_query: types.CallbackQuery, state: FSMContext):
+    ...
+    service = await Services.get_service_by_callback(callback_name)
     async with state.proxy() as data:
-        """ Добавление данных в Хранилище состояний (Redis) """
-        ...
-        data['api_key'] = api_key
-        ...
+        data['service'] = service.code
+    ...
 ```
+> Получение данных:
+```python
+    ...
+    url = data['api_base_url']
+    query_params = {'api_key': data['api_key'],   # ключ также был записан, чтобы не обращаться каждый раз к основной БД
+                    'action': data['action'],
+                    'service': data['service'],
+                    'country': data['country']}
+    ...
+```
+  
+#### 6. Использование клавиатур [keyboards.py][10]
+```python
+  from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+  import emoji
+  ...
+```
+> emoji:
+```python
+  ...
+  ready_emoji = emoji.emojize(':check_mark_button:')
+  cancel_emoji = emoji.emojize(':cross_mark:')
+```
+> Создание кнопок:
+```python
+  ...
+  inline_btn_access_ready = InlineKeyboardButton(ready_emoji, callback_data='1')
+  inline_btn_access_cancel = InlineKeyboardButton(cancel_emoji, callback_data='8')
+```
+> Создание клавиатуры и добавление к ней кнопок:
+```python
+  ...
+  ACCESS = InlineKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+  ACCESS.add(inline_btn_access_ready, inline_btn_access_cancel)
+```
+> Создание клавиатуры сервисов с помощью функции:
+```python
+  ...
+  from asgiref.sync import sync_to_async
+  ...
+  @sync_to_async
+  def get_service_keyboard(callback=None, current_page=1):
+    """Первоначальный вывод кнопок с сервисами и работающими callback или/
+    Редактирование нажатой кнопки и назначение нераработающих callback"""
 
+    service_keyboard_list = []
+    for service in SERVICES_QUERYSET:
+        text = f'{service.name}: {service.price}р.'
+        if callback is None:
+            callback_data = service.callback_name
+        else:
+            callback_data = 'none_callback'
+            if service.callback_name == callback:
+                text = f'{service.name}: {service.price}р.   {choice_emoji}'
+
+        inline_btn_service = [InlineKeyboardButton(text, callback_data=callback_data)]    # создание кнопок сервисов
+        service_keyboard_list.append(inline_btn_service)                                  # добавление в список для пагинации
+    ...
+```
+#### 7. Пагинация
+> Создаем кнопки перемещения:
+```python
+pre_paginator_btn = InlineKeyboardButton('<-', callback_data='<-')
+next_paginator_btn = InlineKeyboardButton('->', callback_data='->')
+```
+> Создаем объект для пагинации, в качестве аргументов передаем сформированный список кнопок сервисов и количество выводимых сервисов на одной странице:
+```python
+  from django.core.paginator import Paginator
+  ...
+  @sync_to_async
+  def get_service_keyboard(callback=None, current_page=1):
+    ...
+    p = Paginator(service_keyboard_list, 5)
+    ...
+```
+> Добавляем условия для callback кнопок перемещения, чтобы исключить нажатие при достижении правой/левой границ:
+```python
+    if current_page == 1:
+        pre_paginator_btn.callback_data = 'none_callback'
+    if current_page > 1:
+        pre_paginator_btn.callback_data = '<-'
+    if current_page == p.num_pages:
+        next_paginator_btn.callback_data = 'none_callback'
+    if current_page < p.num_pages:
+        next_paginator_btn.callback_data = '->'
+    if callback is not None:
+        pre_paginator_btn.callback_data = 'none_callback'
+        next_paginator_btn.callback_data = 'none_callback'
+    ...
+```
+> Создаем неактивную кнопку текущей страницы и добавляем все созданные кнопки в общую клавиатуру (текущую страницу с 5-ю сервисами и в конец кнопки перемещения):
+```python
+  ...
+    current_page_btn = InlineKeyboardButton(text=f'{current_page}', callback_data='none_callback')
+    service_keyboard = InlineKeyboardMarkup(resize_keyboard=True, inline_keyboard=p.page(current_page)).row(
+        pre_paginator_btn, current_page_btn, next_paginator_btn
+    )
+    return service_keyboard
+```
   
 [1]: https://sms-activate.ru/ru/api2
 [2]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/app.py#:~:text=storage%20%3D%20RedisStorage2(host,bot%2C%20storage%3Dstorage)
@@ -169,3 +275,4 @@ if __name__ == "__main__":
 [7]: https://github.com/borisshavrin/sms_activate_bot/blob/bd0828f2c2bfe8792bd5ff0958df8dc81a1b6670/bot_app/states.py
 [8]: https://github.com/borisshavrin/sms_activate_bot/blob/48a4d107475ad997b2e9e028cf8ee9dff6a2673c/bot_app/commands.py
 [9]: https://github.com/borisshavrin/sms_activate_bot/blob/bd0828f2c2bfe8792bd5ff0958df8dc81a1b6670/bot_app/app.py
+[10]: https://github.com/borisshavrin/sms_activate_bot/blob/81e48651b9f49e0901d58eda41b33f7e44a6180d/bot_app/keyboards.py
