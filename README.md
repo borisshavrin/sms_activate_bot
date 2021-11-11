@@ -106,9 +106,59 @@ if __name__ == "__main__":
     await States.get_api_key.set()                          # установка состояния
     await message.answer('Для добавления ключа, отправь его следующим сообщением')
   ```  
-
-
   
+#### 4. Шифрование API-key  
+> Единоразово создаем ключ шифрования, вызывая из файла [crypto.py][3] слудующую функцию:
+```python
+  from cryptography.fernet import Fernet
+
+  from sms_activate_bot.settings import BASE_DIR
+
+
+  def write_key():
+    key = Fernet.generate_key()
+    with open(f'{BASE_DIR}/crypto/crypto.key', 'wb') as key_file:
+        key_file.write(key)
+```
+> Обращение к созданному ключу:
+```python
+  ...
+  def load_key():
+    return open(f'{BASE_DIR}/crypto/crypto.key', 'rb').read()
+```
+> Пример шифрования предоставлен ниже. Однотипным способом реализован и механизм расшифровки
+```python
+  ...
+  def encrypt(text):
+    key = load_key()
+    cipher = Fernet(key)
+    encrypted_text = cipher.encrypt(text)
+    return encrypted_text
+```
+> Шифрование в уже знакомой функции отлова ключа, отправленного боту следующим сообщением:
+```python
+  @dp.message_handler(content_types=["text"], state=States.get_api_key)
+  async def get_api_key(message: types.Message):
+    text_b = message.text.encode('utf-8')
+    api_key = crypto.encrypt(text_b)
+    ...
+```
+> Расшифровка и помещение ключа в Хранилище состояний для дальнейшего использования уже без обращения к основной БД:
+```python
+  @dp.message_handler(commands=['get_sim'], state='*')
+  async def get_sim(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    user = await Users.get_user(user_id)
+    text_b = crypto.decrypt(user.api_key)
+    api_key = text_b.decode('utf-8')
+    await States.get_service.set()
+    async with state.proxy() as data:
+        """ Добавление данных в Хранилище состояний (Redis) """
+        ...
+        data['api_key'] = api_key
+        ...
+```
+
   
 [1]: https://sms-activate.ru/ru/api2
 [2]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/app.py#:~:text=storage%20%3D%20RedisStorage2(host,bot%2C%20storage%3Dstorage)
