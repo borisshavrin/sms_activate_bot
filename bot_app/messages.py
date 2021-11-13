@@ -1,10 +1,14 @@
 import asyncio
+import logging
 
 from aiogram.types import Message
 from aiogram.types.base import Integer
+import logs.confs.log_conf
 
 from bot_app.app import bot
 from bot_app.keyboards import STOP_TIMER
+
+BOT_APP_LOG = logging.getLogger('bot_app_log')
 
 # text templates
 
@@ -46,5 +50,10 @@ async def send_timer_message(user_id: Integer, timer_minutes: int):
 
 
 async def send_status_message(user_id: Integer, status_response: str):
-    status_message = SET_STATUS_RESPONSES[status_response]
-    await bot.send_message(user_id, status_message)
+    try:
+        status_message = SET_STATUS_RESPONSES[status_response]
+    except KeyError as err:
+        BOT_APP_LOG.error(f'{err}, пользователь: {user_id}')
+        return
+    else:
+        await bot.send_message(user_id, status_message)

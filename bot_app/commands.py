@@ -1,9 +1,12 @@
+import logging
+
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 import requests
 import asyncio
 
 from django.core.exceptions import ObjectDoesNotExist
+import logs.confs.log_conf
 
 from crypto import crypto
 from services.models import Services
@@ -18,6 +21,7 @@ from .sms_code import start_timer_and_get_sms_code
 from .states import States
 
 SERVICES_CALLBACK_NAME_LIST = Services.get_callback_name_list()
+BOT_APP_LOG = logging.getLogger('bot_app_log')
 
 
 @dp.message_handler(commands=['start'], state='*')
@@ -47,9 +51,11 @@ async def get_api_key(message: types.Message):
     try:
         user = await Users.get_user(user_id)
     except ObjectDoesNotExist:
+        BOT_APP_LOG.info(f'Создание пользователя {user_id}')
         await Users.create_user(user_id, api_key)
         await message.answer('Пользователь создан!')
     else:
+        BOT_APP_LOG.info(f'Обновление API-key для пользователя {user_id}')
         await user.update_api_key(api_key)
         await message.answer('Ключ обновлен!')
     finally:
@@ -115,9 +121,15 @@ async def get_number_for_chosen_service(callback_query: types.CallbackQuery, sta
     try:
         activation_id = result[1]
         phone = result[2][1:]
-    except IndexError:
-        message = 'Нет номеров' if status == "NO_NUMBERS" else 'Закончился баланс'
+    except IndexError as err:
+        if status == "NO_NUMBERS":
+            message = 'Нет номеров'
+        elif status == "NO_BALANCE":
+            message = 'Закончился баланс'
+        else:
+            message = 'Повторите операцию позднее'
         await bot.send_message(callback_query.from_user.id, message)
+        BOT_APP_LOG.error(f'error: {err} для get_number_for_chosen_service')
     else:
         async with state.proxy() as data:
             data['activation_id'] = activation_id
@@ -154,15 +166,19 @@ async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
     message = callback_query.message
 
     tasks = asyncio.all_tasks()
+    task_timer, task_sms = None, None
     for task in tasks:
-        if task.get_name() == f'sms-{user_id}-{message.message_id - 2}' \
-                or task.get_name() == f'timer-{user_id}-{message.message_id}':
-            task.cancel()
+        if task.get_name() == f'sms-{user_id}-{message.message_id - 2}':
+            task_sms = task
+        if task.get_name() == f'timer-{user_id}-{message.message_id}':
+            task_timer = task
+    task_timer.cancel()
 
     async with state.proxy() as data:
         data['status'] = '8'
     await message.delete()
     await change_and_send_activation_status(data, user_id)
+    task_sms.cancel()
 
 
 @dp.callback_query_handler(lambda c: c.data in ['<-', '->'], state=States.get_service)
