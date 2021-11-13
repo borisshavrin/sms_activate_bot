@@ -11,9 +11,8 @@ from bot_app.app import bot
 from bot_app.messages import edit_timer_message, send_timer_message
 from bot_app.operations import change_and_send_activation_status
 from services.models import Services
+from sms_activate_bot.settings import API_BASE_URL
 from users.models import Users
-
-TASKS = dict()
 
 
 def sleep_state(timeout: int, retry=12 * 5):
@@ -37,13 +36,12 @@ def sleep_state(timeout: int, retry=12 * 5):
 @sync_to_async
 def get_sms_code(data: FSMContextProxy, task_edit_message):
     action = 'getStatus'
-    url = data['api_base_url']
     query_params = {
         'api_key': data['api_key'],
         'action': action,
         'id': data['activation_id']
     }
-    activation_state = get_activation_state(url, query_params, task_edit_message)
+    activation_state = get_activation_state(query_params, task_edit_message)
     try:
         sms_code = activation_state[1]
     except TypeError:
@@ -53,18 +51,18 @@ def get_sms_code(data: FSMContextProxy, task_edit_message):
 
 
 @sleep_state(5)
-def get_activation_state(url: str, query_params, task_edit_message):
+def get_activation_state(query_params, task_edit_message):
     try:
-        get_state = requests.get(url, params=query_params)
+        get_state = requests.get(API_BASE_URL, params=query_params)
         state = get_state.text.split(':')
     except requests.exceptions.Timeout as err:
         # Отправка admin / log
-        print(f'The request timed out: {err.response} для {url}')
+        print(f'The request timed out: {err.response} для {API_BASE_URL}')
         # Повторное поднятие ошибки исключения для декоратора
         raise requests.exceptions.Timeout
     else:
         if task_edit_message.done():
-            state.append('sms-code')                # Позволяет завершить цикл while досрочно
+            state.append('sms-code received!')                # Позволяет завершить цикл while досрочно
         return state
 
 
@@ -72,9 +70,8 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
     timer_message = await send_timer_message(user_id, timer_minutes)
     task_edit_message = asyncio.create_task(
         edit_timer_message(message=timer_message, timer=timer_minutes * 60 - 1),
-        name='timer'
+        name=f'timer-{user_id}-{timer_message.message_id}'
     )
-    TASKS[f'{user_id}-{timer_message.message_id}-timer'] = task_edit_message
 
     try:
         async with state.proxy() as data:

@@ -7,15 +7,15 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from crypto import crypto
 from services.models import Services
+from sms_activate_bot.settings import API_BASE_URL
 from users.models import Users
 
 from .app import dp, bot
 from .messages import WELCOME_MESSAGE, COMMANDS
 from .keyboards import ACCESS, ready_emoji, get_service_keyboard
-from .operations import change_and_send_activation_status
-from .sms_code import start_timer_and_get_sms_code, TASKS
+from .operations import change_and_send_activation_status, update_service_price
+from .sms_code import start_timer_and_get_sms_code
 from .states import States
-from services.update_price import update_service_price
 
 SERVICES_CALLBACK_NAME_LIST = Services.get_callback_name_list()
 
@@ -66,8 +66,7 @@ async def get_balance(message: types.Message):
     api_key = text_b.decode('utf-8')
     query_params = {'api_key': api_key,
                     'action': 'getBalance'}
-    url = 'https://sms-activate.ru/stubs/handler_api.php'
-    res = requests.get(url, params=query_params)
+    res = requests.get(API_BASE_URL, params=query_params)
     balance = res.text.split(':')[1]
     await asyncio.sleep(1)
     await message.answer(f'Баланс: {balance}')
@@ -82,7 +81,6 @@ async def get_sim(message: types.Message, state: FSMContext):
     await States.get_service.set()
     async with state.proxy() as data:
         """ Добавление данных в Хранилище состояний (Redis) """
-        data['api_base_url'] = 'https://sms-activate.ru/stubs/handler_api.php'
         data['api_key'] = api_key
         data['action'] = 'getNumber'
         data['country'] = '0'
@@ -107,12 +105,11 @@ async def get_number_for_chosen_service(callback_query: types.CallbackQuery, sta
     change_service_keyboard = await get_service_keyboard(callback_name, current_page=data['page'])
     await callback_query.message.edit_reply_markup(reply_markup=change_service_keyboard)
 
-    url = data['api_base_url']
     query_params = {'api_key': data['api_key'],
                     'action': data['action'],
                     'service': data['service'],
                     'country': data['country']}
-    res = requests.get(url, params=query_params)
+    res = requests.get(API_BASE_URL, params=query_params)
     result = res.text.split(':')
     status = result[0]
     try:
@@ -144,11 +141,10 @@ async def get_sms_code(callback_query: types.CallbackQuery, state: FSMContext):
 
     status_response = await change_and_send_activation_status(data, user_id)
     if status_response == 'ACCESS_READY':
-        task_sms = asyncio.create_task(
+        asyncio.create_task(
             start_timer_and_get_sms_code(user_id=user_id, state=state),
-            name='sms'
+            name=f'sms-{user_id}-{message.message_id}'
         )
-        TASKS[f'{user_id}-{message.message_id}-sms'] = task_sms
 
 
 @dp.callback_query_handler(lambda c: c.data in ['stop'], state=States.get_service)
@@ -157,15 +153,16 @@ async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     message = callback_query.message
 
-    task_timer = TASKS[f'{user_id}-{message.message_id}-timer']
-    task_sms = TASKS[f'{user_id}-{message.message_id - 2}-sms']
-    task_timer.cancel()
+    tasks = asyncio.all_tasks()
+    for task in tasks:
+        if task.get_name() == f'sms-{user_id}-{message.message_id - 2}' \
+                or task.get_name() == f'timer-{user_id}-{message.message_id}':
+            task.cancel()
 
     async with state.proxy() as data:
         data['status'] = '8'
     await message.delete()
     await change_and_send_activation_status(data, user_id)
-    task_sms.cancel()
 
 
 @dp.callback_query_handler(lambda c: c.data in ['<-', '->'], state=States.get_service)

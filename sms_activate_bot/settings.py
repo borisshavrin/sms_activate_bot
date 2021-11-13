@@ -143,4 +143,6 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+API_BASE_URL = 'https://sms-activate.ru/stubs/handler_api.php'
+
 django.setup()
