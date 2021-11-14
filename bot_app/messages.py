@@ -1,10 +1,14 @@
 import asyncio
+import logging
 
 from aiogram.types import Message
 from aiogram.types.base import Integer
+import logs.confs.log_conf
 
 from bot_app.app import bot
 from bot_app.keyboards import STOP_TIMER
+
+BOT_APP_LOG = logging.getLogger('bot_app_log')
 
 # text templates
 
@@ -21,8 +25,17 @@ SET_STATUS_RESPONSES = {'ACCESS_READY': 'Готовность номера по�
                         'ACCESS_ACTIVATION': 'Сервис успешно активирован',
                         'ACCESS_CANCEL': 'Активация отменена'}
 
+STATUSES_GET_NUMBER = {'NO_NUMBERS': 'Нет номеров',
+                       'NO_BALANCE': 'Закончился баланс',
+                       'BAD_ACTION': 'Некорректное действие',
+                       'BAD_SERVICE': 'Некорректное наименование сервиса',
+                       'BAD_KEY': 'Неверный API-ключ',
+                       'ERROR_SQL': 'Ошибка SQL-сервера',
+                       'WRONG_EXCEPTION_PHONE': 'Некорректные исключающие префиксы',
+                       'NO_BALANCE_FORWARD': 'Недостаточно средств для покупки переадресации'}
 
 # funcs
+
 
 async def edit_timer_message(message: Message, timer: int):
     """Редактирует сообщение таймера"""
@@ -46,5 +59,16 @@ async def send_timer_message(user_id: Integer, timer_minutes: int):
 
 
 async def send_status_message(user_id: Integer, status_response: str):
-    status_message = SET_STATUS_RESPONSES[status_response]
-    await bot.send_message(user_id, status_message)
+    """
+    Функция отправляет статус активации
+    :param user_id:
+    :param status_response:
+    :return:
+    """
+    try:
+        status_message = SET_STATUS_RESPONSES[status_response]
+    except KeyError as err:
+        BOT_APP_LOG.error(f'{err}, пользователь: {user_id}')
+        return
+    else:
+        await bot.send_message(user_id, status_message)
