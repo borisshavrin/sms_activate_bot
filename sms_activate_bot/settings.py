@@ -99,8 +99,6 @@ DATABASES = {
         'NAME': 'sms_activate_bot',
         'ENGINE': 'django.db.backends.postgresql',
         'USER': 'postgres',
-        'PASSWORD': DB_PASSWORD,
-        'HOST': 'localhost',
     }
 }
 
