@@ -163,7 +163,7 @@ async def get_sms_code(callback_query: types.CallbackQuery, state: FSMContext):
     if status_response == 'ACCESS_READY':
         asyncio.create_task(
             start_timer_and_get_sms_code(user_id=user_id, state=state),
-            name=f'sms-{user_id}-{message.message_id}'
+            name=f'sms-{user_id}'
         )
         await message.delete()
 
@@ -177,9 +177,9 @@ async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
     tasks = asyncio.all_tasks()
     task_timer, task_sms = None, None
     for task in tasks:
-        if task.get_name() == f'sms-{user_id}-{message.message_id - 2}':
+        if task.get_name() == f'sms-{user_id}':
             task_sms = task
-        if task.get_name() == f'timer-{user_id}-{message.message_id}':
+        if task.get_name() == f'timer-{user_id}':
             task_timer = task
     task_timer.cancel()
 

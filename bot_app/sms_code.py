@@ -77,7 +77,7 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
     timer_message = await send_timer_message(user_id, timer_minutes)
     task_edit_message = asyncio.create_task(
         edit_timer_message(message=timer_message, timer=timer_minutes * 60 - 1),
-        name=f'timer-{user_id}-{timer_message.message_id}'
+        name=f'timer-{user_id}'
     )
 
     try:
@@ -91,7 +91,7 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
             data['status'] = '8'
 
     except CancelledError:
-        BOT_APP_LOG.error(f'Таск пользователя {user_id} был завершен')
+        BOT_APP_LOG.info(f'Таск пользователя {user_id} был завершен')
         return
 
     else:
