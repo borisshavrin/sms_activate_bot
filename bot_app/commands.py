@@ -14,7 +14,7 @@ from sms_activate_bot.settings import API_BASE_URL
 from users.models import Users
 
 from .app import dp, bot
-from .messages import WELCOME_MESSAGE, COMMANDS
+from .messages import WELCOME_MESSAGE, COMMANDS, STATUSES_GET_NUMBER
 from .keyboards import ACCESS, ready_emoji, get_service_keyboard
 from .operations import change_and_send_activation_status, update_service_price
 from .sms_code import start_timer_and_get_sms_code
@@ -45,23 +45,26 @@ async def send_api_key(message: types.Message):
 
 @dp.message_handler(content_types=["text"], state=States.get_api_key)
 async def get_api_key(message: types.Message):
-    text_b = message.text.encode('utf-8')
-    api_key = crypto.encrypt(text_b)
-    user_id = message.from_user.id
-    try:
-        user = await Users.get_user(user_id)
-    except ObjectDoesNotExist:
-        BOT_APP_LOG.info(f'Создание пользователя {user_id}')
-        await Users.create_user(user_id, api_key)
-        await message.answer('Пользователь создан!')
+    if message.text in COMMANDS:
+        return await States.start.set()
     else:
-        BOT_APP_LOG.info(f'Обновление API-key для пользователя {user_id}')
-        await user.update_api_key(api_key)
-        await message.answer('Ключ обновлен!')
-    finally:
-        await asyncio.sleep(0.5)
-        await States.api_key_ready.set()
-        await message.answer('Теперь вам доступен заказ номеров, воспользуйтесь командой /get_sim')
+        text_b = message.text.encode('utf-8')
+        api_key = crypto.encrypt(text_b)
+        user_id = message.from_user.id
+        try:
+            user = await Users.get_user(user_id)
+        except ObjectDoesNotExist:
+            BOT_APP_LOG.info(f'Создание пользователя {user_id}')
+            await Users.create_user(user_id, api_key)
+            await message.answer('Пользователь создан!')
+        else:
+            BOT_APP_LOG.info(f'Обновление API-key для пользователя {user_id}')
+            await user.update_api_key(api_key)
+            await message.answer('Ключ обновлен!')
+        finally:
+            await asyncio.sleep(0.5)
+            await States.api_key_ready.set()
+            await message.answer('Теперь вам доступен заказ номеров, воспользуйтесь командой /get_sim')
 
 
 @dp.message_handler(commands=['balance'], state='*')
@@ -122,20 +125,25 @@ async def get_number_for_chosen_service(callback_query: types.CallbackQuery, sta
         activation_id = result[1]
         phone = result[2][1:]
     except IndexError as err:
-        if status == "NO_NUMBERS":
-            message = 'Нет номеров'
-        elif status == "NO_BALANCE":
-            message = 'Закончился баланс'
+        if status in STATUSES_GET_NUMBER.keys():
+            message = STATUSES_GET_NUMBER[status]
+            if status == 'BAD_KEY':
+                message += '\nВоспользуйтесь командой /send_api_key'
+        elif status.split(':')[0] == 'BANNED':
+            message = status.split(':')[1] + '-время на которое аккаунт заблокирован'
         else:
-            message = 'Повторите операцию позднее'
+            message = f'Повторите операцию позднее'
         await bot.send_message(callback_query.from_user.id, message)
-        BOT_APP_LOG.error(f'error: {err} для get_number_for_chosen_service')
+        BOT_APP_LOG.error(f'error: {err} Статус получения номера для пользователя '
+                          f'{callback_query.from_user.id}: {status}')
     else:
         async with state.proxy() as data:
             data['activation_id'] = activation_id
             data['phone'] = phone
 
-        await bot.send_message(callback_query.from_user.id, f'Ваш номер для сервиса "{service.name}":\n{phone}')
+        await bot.send_message(callback_query.from_user.id,
+                               f'Ваш номер для сервиса "{service.name}":\n<code>{phone}</code>',
+                               parse_mode='HTML')
         await bot.send_message(callback_query.from_user.id,
                                f'Нажмите {ready_emoji} после того как смс будет отправлено', reply_markup=ACCESS)
 
@@ -157,9 +165,10 @@ async def get_sms_code(callback_query: types.CallbackQuery, state: FSMContext):
             start_timer_and_get_sms_code(user_id=user_id, state=state),
             name=f'sms-{user_id}-{message.message_id}'
         )
+        await message.delete()
 
 
-@dp.callback_query_handler(lambda c: c.data in ['stop'], state=States.get_service)
+@dp.callback_query_handler(lambda c: c.data in ['stop'], state='*')
 async def stop_timer(callback_query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(callback_query.id)
     user_id = callback_query.from_user.id

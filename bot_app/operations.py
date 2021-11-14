@@ -1,14 +1,19 @@
 import asyncio
+import logging
+from json import JSONDecodeError
 
 import requests
 from aiogram.dispatcher.storage import FSMContextProxy
 from aiogram.utils import emoji
 from aiogram.types.base import Integer
+import logs.confs.log_conf
 
 from .messages import send_status_message
 from bot_app.app import bot
 from services.models import Services
 from sms_activate_bot.settings import API_BASE_URL
+
+BOT_APP_LOG = logging.getLogger('bot_app_log')
 
 
 async def change_and_send_activation_status(data: FSMContextProxy, user_id: Integer):
@@ -44,11 +49,16 @@ def get_price(service_code: str, api_key):
         'country': 0
     }
     res = requests.get(API_BASE_URL, params=query_params)
-    data_json = res.json()
-    price_info = data_json['0']
-    price_wholesale = price_info[service_code]['cost']  # оптовая цена
-    price_retail = price_wholesale * 1.5  # розничная цена
-    return price_retail
+    try:
+        data_json = res.json()
+    except JSONDecodeError:
+        BOT_APP_LOG.error('Ошибка обновления цены. В запросе получен неверный API-key')
+        return
+    else:
+        price_info = data_json['0']
+        price_wholesale = price_info[service_code]['cost']  # оптовая цена
+        price_retail = price_wholesale * 1.5  # розничная цена
+        return price_retail
 
 
 async def send_message_about_changed_price(user_id, changed_price):

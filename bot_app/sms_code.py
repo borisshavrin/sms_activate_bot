@@ -96,7 +96,9 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
 
     else:
         service = await Services.get_service_by_code(data['service'])
-        await bot.send_message(user_id, f'Ваш код для входа в {service.name}:\n{int(sms)}')
+        await bot.send_message(user_id,
+                               parse_mode='HTML',
+                               text=f'Ваш код для входа в {service.name}:\n<code>{int(sms)}</code>')
         await timer_message.delete()
         async with state.proxy() as data:
             data['status'] = '6'
