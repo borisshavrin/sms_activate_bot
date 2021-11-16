@@ -30,11 +30,8 @@ SECRET_KEY = env("SECRET_KEY")
 API_TOKEN_BOT = env("API_TOKEN_BOT")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
-#
-# ALLOWED_HOSTS = []
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -90,11 +87,6 @@ WSGI_APPLICATION = 'sms_activate_bot.wsgi.application'
 DB_PASSWORD = env("DB_PASSWORD")
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
-
     'default': {
         'NAME': 'sms_activate_bot',
         'ENGINE': 'django.db.backends.postgresql',
@@ -105,7 +97,6 @@ DATABASES = {
 # REDIS related settings
 REDIS_HOST = '127.0.0.1'
 REDIS_PORT = '6379'
-
 
 # CELERY_BROKER_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
 # CELERY_BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600}
@@ -150,13 +141,23 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
 API_BASE_URL = 'https://sms-activate.ru/stubs/handler_api.php'
+
+if DEBUG:
+    ALLOWED_HOSTS = []
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 django.setup()
