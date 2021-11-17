@@ -24,5 +24,8 @@ def encrypt(text):
 def decrypt(encrypted_text):
     key = load_key()
     cipher = Fernet(key)
-    decrypted_text = cipher.decrypt(encrypted_text)
+    if type(encrypted_text) == memoryview:
+        decrypted_text = cipher.decrypt(encrypted_text.tobytes())
+    else:
+        decrypted_text = cipher.decrypt(encrypted_text)
     return decrypted_text

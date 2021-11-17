@@ -46,6 +46,7 @@ async def send_api_key(message: types.Message):
 @dp.message_handler(content_types=["text"], state=States.get_api_key)
 async def get_api_key(message: types.Message):
     if message.text in COMMANDS:
+        await message.answer('Изменение ключа отменено. Повторите команду')
         return await States.start.set()
     else:
         text_b = message.text.encode('utf-8')
@@ -76,9 +77,16 @@ async def get_balance(message: types.Message):
     query_params = {'api_key': api_key,
                     'action': 'getBalance'}
     res = requests.get(API_BASE_URL, params=query_params)
-    balance = res.text.split(':')[1]
-    await asyncio.sleep(1)
-    await message.answer(f'Баланс: {balance}')
+    try:
+        balance = res.text.split(':')[1]
+    except IndexError:
+        if res.text == 'BAD_KEY':
+            message_text = STATUSES_GET_NUMBER[res.text]
+            message_text += '\nВоспользуйтесь командой /send_api_key'
+            await message.answer(message_text)
+    else:
+        await asyncio.sleep(1)
+        await message.answer(f'Баланс: {balance}')
 
 
 @dp.message_handler(commands=['get_sim'], state='*')
