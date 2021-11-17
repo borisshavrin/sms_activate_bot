@@ -11,7 +11,6 @@ choice_emoji = emoji.emojize(':backhand_index_pointing_left_light_skin_tone:')
 ready_emoji = emoji.emojize(':check_mark_button:')
 cancel_emoji = emoji.emojize(':cross_mark:')
 stop_timer_emoji = emoji.emojize('🙅‍♂️')
-SERVICES_QUERYSET = Services.objects.all()
 
 # keyboards
 
@@ -36,9 +35,9 @@ PAGINATOR_KB.add(pre_paginator_btn, next_paginator_btn)
 def get_service_keyboard(callback=None, current_page=1):
     """Первоначальный вывод кнопок с сервисами и работающими callback или/
     Редактирование нажатой кнопки и назначение нераработающих callback"""
-
+    services_queryset = Services.objects.all()
     service_keyboard_list = []
-    for service in SERVICES_QUERYSET:
+    for service in services_queryset:
         text = f'{service.name}: {service.price}р.'
         if callback is None:
             callback_data = service.callback_name
