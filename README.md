@@ -11,8 +11,9 @@
 
 
 <p align="center">
-  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/a568a2b309d781b5cbf3b07838c5764e0d1b9b75/static/github/img/titleBot.jpeg" width=400px>
+  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/47a458493d365d51612b2163c044bb78395a9f0b/static/github/img/titleBot.jpg" width=300px>
   <img src="https://github.com/borisshavrin/sms_activate_bot/blob/a568a2b309d781b5cbf3b07838c5764e0d1b9b75/static/github/img/getNumber.GIF" width=300px>
+  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/47a458493d365d51612b2163c044bb78395a9f0b/static/github/img/getSms.GIF" width=300px>
 </p>
   
 
