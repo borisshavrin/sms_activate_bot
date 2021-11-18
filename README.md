@@ -20,9 +20,9 @@
 ### Демо 
 
 <p align="center">
-  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/47a458493d365d51612b2163c044bb78395a9f0b/static/github/img/titleBot.jpg" width=250px>
-  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/a568a2b309d781b5cbf3b07838c5764e0d1b9b75/static/github/img/getNumber.GIF" width=250px>
-  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/47a458493d365d51612b2163c044bb78395a9f0b/static/github/img/getSms.GIF" width=250px>
+  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/master/static/github/img/titleBot.jpg" width=250px>
+  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/master/static/github/img/getNumber.GIF" width=250px>
+  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/master/static/github/img/getSms.GIF" width=250px>
 </p>
   
   
@@ -93,6 +93,7 @@ if __name__ == "__main__":
 
 
   class States(StatesGroup):
+    start = State()
     get_service = State()
     get_api_key = State()
     api_key_ready = State()
@@ -120,13 +121,11 @@ if __name__ == "__main__":
 ```
 > Обращение к созданному ключу:
 ```python
-  ...
   def load_key():
     return open(f'{BASE_DIR}/crypto/crypto.key', 'rb').read()
 ```
-> Пример шифрования предоставлен ниже. Однотипным способом реализован и механизм расшифровки
+> Пример шифрования предоставлен ниже. Однотипным способом реализован и механизм расшифровки.
 ```python
-  ...
   def encrypt(text):
     key = load_key()
     cipher = Fernet(key)
@@ -166,7 +165,6 @@ if __name__ == "__main__":
 ```
 > Получение данных:
 ```python
-    ...
     url = data['api_base_url']
     query_params = {'api_key': data['api_key'],   # ключ также был записан, чтобы не обращаться каждый раз к основной БД
                     'action': data['action'],
@@ -183,25 +181,21 @@ if __name__ == "__main__":
 ```
 > emoji:
 ```python
-  ...
   ready_emoji = emoji.emojize(':check_mark_button:')
   cancel_emoji = emoji.emojize(':cross_mark:')
 ```
 > Создание кнопок:
 ```python
-  ...
   inline_btn_access_ready = InlineKeyboardButton(ready_emoji, callback_data='1')
   inline_btn_access_cancel = InlineKeyboardButton(cancel_emoji, callback_data='8')
 ```
 > Создание клавиатуры и добавление к ней кнопок:
 ```python
-  ...
   ACCESS = InlineKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
   ACCESS.add(inline_btn_access_ready, inline_btn_access_cancel)
 ```
 > Создание клавиатуры сервисов с помощью функции:
 ```python
-  ...
   from asgiref.sync import sync_to_async
   ...
   @sync_to_async
@@ -252,25 +246,70 @@ next_paginator_btn = InlineKeyboardButton('->', callback_data='->')
     if callback is not None:
         pre_paginator_btn.callback_data = 'none_callback'
         next_paginator_btn.callback_data = 'none_callback'
-    ...
 ```
 > Создаем неактивную кнопку текущей страницы и добавляем все созданные кнопки в общую клавиатуру (текущую страницу с 5-ю сервисами и в конец кнопки перемещения):
 ```python
-  ...
     current_page_btn = InlineKeyboardButton(text=f'{current_page}', callback_data='none_callback')
     service_keyboard = InlineKeyboardMarkup(resize_keyboard=True, inline_keyboard=p.page(current_page)).row(
         pre_paginator_btn, current_page_btn, next_paginator_btn
     )
     return service_keyboard
 ```
+
+#### 8. Выполнение запросов
+> Выполняем запрос, используя данные из Хранилища состояний как параметры запроса:
+```python
+query_params = {'api_key': data['api_key'],
+                'action': data['action'],
+                'service': data['service'],
+                'country': data['country']}
+res = requests.get(API_BASE_URL, params=query_params)
+result = res.text.split(':')
+status = result[0]
+...
+```
+> Получаем номер:
+```python
+try:
+    activation_id = result[1]
+    phone = result[2][1:]
+...
+```
+
+#### 9. Использование фоновых задач (Tasks)
+> Создание задачи (аргументами являются функция, которую необходимо выполнить, и имя задачи):
+```python
+asyncio.create_task(
+    start_timer_and_get_sms_code(user_id=user_id, state=state),
+    name=f'sms-{user_id}'
+)
+...
+```
+> Поиск задачи среди всех запущенных задач:
+```python
+tasks = asyncio.all_tasks()
+task_timer, task_sms = None, None
+for task in tasks:
+    if task.get_name() == f'sms-{user_id}':
+        task_sms = task
+    if task.get_name() == f'timer-{user_id}':
+        task_timer = task
+...
+```
+> Каждую отловленную задачу при необходимости можно отменить:
+```python
+task_timer.cancel()
+...
+task_sms.cancel()
+```
   
 [1]: https://sms-activate.ru/ru/api2
 [2]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/app.py#:~:text=storage%20%3D%20RedisStorage2(host,bot%2C%20storage%3Dstorage)
-[3]: https://github.com/borisshavrin/sms_activate_bot/blob/59f819609db73bbb362752e29224a4030e8e661e/crypto/crypto.py
+[3]: https://github.com/borisshavrin/sms_activate_bot/blob/master/crypto/crypto.py
 [4]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/commands.py#:~:text=data%5B%27page%27%5D%20%3D%201-,await%20asyncio.sleep(1),asyncio.create_task(update_service_price(user_id%2C%20api_key)),-service_keyboard%20%3D%20await%20get_service_keyboard
 [5]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/commands.py#:~:text=await%20States.get_service,data%5B%27page%27%5D%20%3D%201
-[6]: https://github.com/borisshavrin/sms_activate_bot/blob/48a4d107475ad997b2e9e028cf8ee9dff6a2673c/main.py
-[7]: https://github.com/borisshavrin/sms_activate_bot/blob/bd0828f2c2bfe8792bd5ff0958df8dc81a1b6670/bot_app/states.py
-[8]: https://github.com/borisshavrin/sms_activate_bot/blob/48a4d107475ad997b2e9e028cf8ee9dff6a2673c/bot_app/commands.py
-[9]: https://github.com/borisshavrin/sms_activate_bot/blob/bd0828f2c2bfe8792bd5ff0958df8dc81a1b6670/bot_app/app.py
-[10]: https://github.com/borisshavrin/sms_activate_bot/blob/81e48651b9f49e0901d58eda41b33f7e44a6180d/bot_app/keyboards.py
+[6]: https://github.com/borisshavrin/sms_activate_bot/blob/master/main.py
+[7]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/states.py
+[8]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/commands.py
+[9]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/app.py
+[10]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/keyboards.py
