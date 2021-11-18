@@ -10,14 +10,6 @@
 </p>
 
 
-<p align="center">
-  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/47a458493d365d51612b2163c044bb78395a9f0b/static/github/img/titleBot.jpg" width=250px>
-  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/a568a2b309d781b5cbf3b07838c5764e0d1b9b75/static/github/img/getNumber.GIF" width=250px>
-  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/47a458493d365d51612b2163c044bb78395a9f0b/static/github/img/getSms.GIF" width=250px>
-</p>
-  
-
-
 ### Описание 
 
 Привет! Данный телеграм-бот был создан для упрощенного получения виртуальных номеров, которые можно регистрировать в
@@ -27,7 +19,11 @@
 
 ### Демо 
 
-(изображения, ссылки на видео, интерактивные демо-ссылки);
+<p align="center">
+  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/47a458493d365d51612b2163c044bb78395a9f0b/static/github/img/titleBot.jpg" width=250px>
+  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/a568a2b309d781b5cbf3b07838c5764e0d1b9b75/static/github/img/getNumber.GIF" width=250px>
+  <img src="https://github.com/borisshavrin/sms_activate_bot/blob/47a458493d365d51612b2163c044bb78395a9f0b/static/github/img/getSms.GIF" width=250px>
+</p>
   
   
 ### Технологии в проекте
@@ -46,8 +42,6 @@
   
 Техническое описание проекта
 -----
-(установка, настройка, как помочь проекту).
-  
   
 #### 1. Настройка и запуск бота
 
