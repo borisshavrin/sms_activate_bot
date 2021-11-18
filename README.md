@@ -39,16 +39,16 @@
 Техническое описание проекта
 -----
 
-#### Содержание
-1. [Настройка и запуск бота][]
-2. [Работа с командами и кнопками][]
-3. [Создание и установка состояний][]
-4. [Шифрование API-key][]
-5. [Использование Хранилища состояний][]
-6. [Использование клавиатур][]
-7. [Пагинация][]
-8. [Выполнение запросов][]
-9. [Использование фоновых задач (Tasks)][]
+#### Содержание:
+1. [Настройка и запуск бота][11]
+2. [Работа с командами и кнопками][12]
+3. [Создание и установка состояний][13]
+4. [Шифрование API-key][14]
+5. [Использование Хранилища состояний][15]
+6. [Использование клавиатур][16]
+7. [Пагинация][17]
+8. [Выполнение запросов][18]
+9. [Использование фоновых задач (Tasks)][19]
   
 #### 1. Настройка и запуск бота
 
@@ -320,3 +320,13 @@ task_sms.cancel()
 [8]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/commands.py
 [9]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/app.py
 [10]: https://github.com/borisshavrin/sms_activate_bot/blob/master/bot_app/keyboards.py
+
+[11]: https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#1-%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%B8-%D0%B7%D0%B0%D0%BF%D1%83%D1%81%D0%BA-%D0%B1%D0%BE%D1%82%D0%B0
+[12]: https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#2-%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B0-%D1%81-%D0%BA%D0%BE%D0%BC%D0%B0%D0%BD%D0%B4%D0%B0%D0%BC%D0%B8-%D0%B8-%D0%BA%D0%BD%D0%BE%D0%BF%D0%BA%D0%B0%D0%BC%D0%B8-%D0%B2-commandspy
+[13]: https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#3-%D1%81%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5-%D0%B8-%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D1%81%D0%BE%D1%81%D1%82%D0%BE%D1%8F%D0%BD%D0%B8%D0%B9-%D0%BF%D0%BE%D0%B7%D0%B2%D0%BE%D0%BB%D1%8F%D1%8E%D1%89%D0%B8%D1%85-%D0%BE%D0%BF%D1%80%D0%B5%D0%B4%D0%B5%D0%BB%D0%B8%D1%82%D1%8C-%D0%BA%D0%BE%D0%B3%D0%B4%D0%B0-%D0%B8-%D0%BA%D0%B0%D0%BA%D0%B8%D0%B5-%D1%84%D1%83%D0%BD%D0%BA%D1%86%D0%B8%D0%B8-%D0%B4%D0%BE%D0%BB%D0%B6%D0%BD%D1%8B-%D0%BE%D1%82%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B0%D1%82%D1%8C
+[14]: https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#4-%D1%88%D0%B8%D1%84%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-api-key
+[15]: https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#5-%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-%D1%85%D1%80%D0%B0%D0%BD%D0%B8%D0%BB%D0%B8%D1%89%D0%B0-%D1%81%D0%BE%D1%81%D1%82%D0%BE%D1%8F%D0%BD%D0%B8%D0%B9
+[16]: https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#6-%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-%D0%BA%D0%BB%D0%B0%D0%B2%D0%B8%D0%B0%D1%82%D1%83%D1%80-keyboardspy
+[17]: https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#7-%D0%BF%D0%B0%D0%B3%D0%B8%D0%BD%D0%B0%D1%86%D0%B8%D1%8F
+[18]: https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#8-%D0%B2%D1%8B%D0%BF%D0%BE%D0%BB%D0%BD%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B7%D0%B0%D0%BF%D1%80%D0%BE%D1%81%D0%BE%D0%B2
+[19]:https://github.com/borisshavrin/sms_activate_bot/blob/master/README.md#9-%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-%D1%84%D0%BE%D0%BD%D0%BE%D0%B2%D1%8B%D1%85-%D0%B7%D0%B0%D0%B4%D0%B0%D1%87-tasks
