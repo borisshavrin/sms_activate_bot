@@ -9,8 +9,9 @@ from bot_app import dp
 from bot_app.app import bot
 
 
-WEBHOOK_HOST = '89.108.78.153:80'
-WEBHOOK_PATH = '/path/to/api'
+WEBHOOK_HOST = 'https://my-sms-activate-bot.ru'
+WEBHOOK_PATH = '/'
+
 WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 
 WEBAPP_HOST = '127.0.0.1'
