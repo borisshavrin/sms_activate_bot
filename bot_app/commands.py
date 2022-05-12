@@ -14,7 +14,7 @@ from sms_activate_bot.settings import API_BASE_URL
 from users.models import Users
 
 from .app import dp, bot
-from .messages import WELCOME_MESSAGE, COMMANDS, STATUSES_GET_NUMBER
+from .messages import WELCOME_MESSAGE, COMMANDS, STATUSES_GET_NUMBER, HELP_MESSAGE
 from .keyboards import ACCESS, ready_emoji, get_service_keyboard
 from .operations import change_and_send_activation_status, update_service_price
 from .sms_code import start_timer_and_get_sms_code
@@ -34,7 +34,7 @@ async def start_message(message: types.Message):
 async def help_message(message: types.Message):
     await asyncio.sleep(0.5)
     await message.reply('Теперь по порядку')
-    await message.answer(f'{COMMANDS}')
+    await message.answer(f'{HELP_MESSAGE}')
 
 
 @dp.message_handler(commands=['send_api_key'], state='*')
