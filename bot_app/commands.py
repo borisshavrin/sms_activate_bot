@@ -33,7 +33,7 @@ async def start_message(message: types.Message):
 @dp.message_handler(commands=['help'], state='*')
 async def help_message(message: types.Message):
     await asyncio.sleep(0.5)
-    await message.reply('Список доступных комманд:')
+    await message.reply('Теперь по порядку')
     await message.answer(f'{COMMANDS}')
 
 
