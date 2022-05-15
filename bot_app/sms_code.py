@@ -54,6 +54,8 @@ def get_sms_code(data: FSMContextProxy, task_edit_message):
         BOT_APP_LOG.debug(err)
         return None
     else:
+        if len(sms_code) < 4:
+            sms_code = activation_state
         return sms_code
 
 

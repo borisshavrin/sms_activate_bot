@@ -31,7 +31,7 @@ API_TOKEN_BOT = env("API_TOKEN_BOT")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
