@@ -54,8 +54,6 @@ def get_sms_code(data: FSMContextProxy, task_edit_message):
         BOT_APP_LOG.debug(err)
         return None
     else:
-        if len(sms_code) < 4:
-            sms_code = activation_state
         return sms_code
 
 
@@ -100,7 +98,7 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
         service = await Services.get_service_by_code(data['service'])
         await bot.send_message(user_id,
                                parse_mode='HTML',
-                               text=f'Ваш код для входа в {service.name}:\n<code>{int(sms)}</code>')
+                               text=f'Ваш код для входа в {service.name}:\n<code>{sms}</code>')
         await timer_message.delete()
         async with state.proxy() as data:
             data['status'] = '6'
