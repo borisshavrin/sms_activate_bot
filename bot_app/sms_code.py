@@ -109,8 +109,8 @@ async def start_timer_and_get_sms_code(user_id: Integer, state: FSMContext, time
                 id_activation=data['activation_id'],
                 user=user,
                 service=service,
-                number=int(data['phone']),
-                sms=int(sms)
+                number=str(data['phone']),
+                sms=str(sms)
             )
     finally:
         task_edit_message.cancel()

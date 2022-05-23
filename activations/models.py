@@ -29,15 +29,17 @@ class Activations(models.Model):
         auto_now_add=True,
     )
 
-    number = models.IntegerField(
+    number = models.CharField(
         verbose_name='Номер',
         blank=True,
+        max_length=128,
         default=0,
     )
 
-    sms = models.IntegerField(
+    sms = models.CharField(
         verbose_name='Смс-код',
         blank=True,
+        max_length=128,
         default=0,
     )
 
@@ -47,7 +49,7 @@ class Activations(models.Model):
 
     @staticmethod
     @sync_to_async
-    def create_activation(id_activation, user, service, number, sms):
+    def create_activation(id_activation: str, user: object, service: object, number: str, sms: str):
         activation = Activations.objects.create(
                 id_activation=id_activation,
                 user=user,
